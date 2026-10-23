@@ -195,6 +195,7 @@
       // Learning progress for a word: 'seen', 'right' or 'wrong' (js/progress.js).
       record: function (word, outcome) {
         if (!word) return;
+        Progress.played(word.id);
         if (outcome === 'seen') Progress.seen(word.id);
         else Progress.answer(word.id, outcome === 'right');
       },
@@ -318,11 +319,11 @@
     open(def, { targets: list, intro: intro, back: 'themes', mode: 'review' });
   }
 
-  // Review cards finished: everyone who looks through gets three stars.
-  function cardsDone(words) {
-    setBack('themes');
-    result(3, words);
+  // The result screen with n stars (tests and audits use it to reach the screen).
+  function showResult(n, words) {
+    setBack('games');
+    result(n, words || []);
   }
 
-  window.Games = { open: open, register: register, build: build, menu: menu, stop: stop, bind: bind, review: review, cardsDone: cardsDone, list: function () { return defs.slice(); } };
+  window.Games = { open: open, register: register, build: build, menu: menu, stop: stop, bind: bind, review: review, showResult: showResult, list: function () { return defs.slice(); } };
 })();

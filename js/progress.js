@@ -2,12 +2,13 @@
 // simple spaced-review schedule (Leitner boxes on calendar days).
 //
 //   seen(id)          the child looked at / heard the word (cards, memory flips)
+//   played(id)        the word was in a game round (theme stars need play, not just looking)
 //   answer(id, ok)    a listen-and-pick answer: right moves a due word up a box,
 //                     wrong sends it back to box 0, due tomorrow
 //   due(words)        words waiting for review now, most urgent first
 //   reviewSet(words, n)  n words for "today's review": due words first, then
 //                     the least known; {due: [...], list: [...]}
-//   themeStars(words, themeId)  0–3 stars for a theme; never goes down
+//   themeStars(words, themeId)  0–3 stars for a theme from games only; never goes down
 //   addJarStars(n)    put a round's stars in the star jar; {jar, filled}
 //   nextReviewMode()  the play mode for today's review, taking turns
 //   forget(ids, themeIds)  drop the records of deleted (parent-made) words;
@@ -78,7 +79,7 @@
       var r = words[id];
       if (!r || typeof r !== 'object') return;
       out.words[id] = {
-        seen: num(r.seen), right: num(r.right), wrong: num(r.wrong), last: num(r.last),
+        seen: num(r.seen), right: num(r.right), wrong: num(r.wrong), played: num(r.played), last: num(r.last),
         box: Math.min(MAX_BOX, Math.floor(num(r.box))), due: num(r.due)
       };
     });
@@ -152,7 +153,7 @@
     function rec(id) {
       ready();
       var r = data.words[id];
-      if (!r) r = data.words[id] = { seen: 0, right: 0, wrong: 0, last: 0, box: 0, due: 0 };
+      if (!r) r = data.words[id] = { seen: 0, right: 0, wrong: 0, played: 0, last: 0, box: 0, due: 0 };
       return r;
     }
 
@@ -166,6 +167,12 @@
       if (!r.due) r.due = dayAfter(t, 1); // first meeting: review tomorrow
       r.seen++;
       r.last = t;
+      save();
+    }
+
+    // Tim (phase 9): stars come from playing games, not from looking at cards.
+    function played(id) {
+      rec(id).played++;
       save();
     }
 
@@ -227,7 +234,7 @@
       var known = 0, met = 0;
       list.forEach(function (w) {
         var r = get(w.id);
-        if (r && (r.seen || r.right || r.wrong)) met++;
+        if (r && (r.played || r.right || r.wrong)) met++;
         if (r && r.box >= KNOWN_BOX) known++;
       });
       if (known === list.length) return 3;
@@ -235,7 +242,8 @@
       return met ? 1 : 0;
     }
 
-    // Stars a child has seen are never taken back: the best level is kept.
+    // Only game play counts (played, right, wrong): looking at cards earns no
+    // star. Older saves keep their best level (it is never taken back).
     function themeStars(words, themeId) {
       ready();
       var level = themeLevel(words, themeId);
@@ -282,7 +290,7 @@
     }
 
     return {
-      load: load, get: get, seen: seen, answer: answer, isDue: function (id) { return isDue(id); },
+      load: load, get: get, seen: seen, played: played, answer: answer, isDue: function (id) { return isDue(id); },
       due: due, reviewSet: reviewSet, themeStars: themeStars, addJarStars: addJarStars, jar: jar,
       nextReviewMode: nextReviewMode, forget: forget, clear: clear,
       snapshot: function () { ready(); return JSON.parse(JSON.stringify(data)); }

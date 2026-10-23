@@ -6,15 +6,30 @@
 //   Jar.drop(n, fromEls, box, delay)  add n stars: stars fly from fromEls
 //                           into the jar in box, then it refills / celebrates;
 //                           returns the Progress.addJarStars result
-//   Jar.pop(n, fromEl)      the same in a small overlay (end of a card deck)
 (function () {
   'use strict';
 
   var SVGNS = 'http://www.w3.org/2000/svg';
   var SHELF_MAX = 4;          // full jars drawn on the shelf; more show a "+"
-  // Star slots inside the jar, filled bottom row first, left to right.
-  var SLOTS = [];
-  [96, 76, 56, 36].forEach(function (y) { [18, 40, 62].forEach(function (x) { SLOTS.push([x, y]); }); });
+  // Stars lie in a heap, not a grid (Tim, phase 9): layers of 4, 3, 3, 2 from
+  // the bottom, each star nudged, turned and sized a little differently, in
+  // one of a few golds. A fixed seed: the same heap on every device and every
+  // redraw, so a star never jumps when another one lands.
+  var GOLDS = ['#ffd43b', '#ffc933', '#ffe066', '#ffbf3f'];
+  var PILE = (function () {
+    var seed = 9, rand = function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+    var layers = [[106, [21, 40, 59, 78]], [90, [31, 50, 69]], [75, [28, 48, 68]], [60, [36, 58]]];
+    var out = [];
+    layers.forEach(function (layer) {
+      // Within a layer stars land in a mixed order, not left to right.
+      var xs = layer[1].slice().sort(function () { return rand() - 0.5; });
+      xs.forEach(function (x) {
+        out.push({ x: x + (rand() - 0.5) * 6, y: layer[0] + (rand() - 0.5) * 5, r: (rand() - 0.5) * 56,
+                   s: 21 + rand() * 5, c: GOLDS[Math.floor(rand() * GOLDS.length)] });
+      });
+    });
+    return out;
+  })();
 
   function el(name, attrs) {
     var e = document.createElementNS(SVGNS, name);
@@ -22,31 +37,50 @@
     return e;
   }
 
-  // One jar picture with `stars` of `size` slots filled.
-  function jarSvg(stars, size, cls) {
+  var SPARK = 'M0 -6Q1 -1 6 0Q1 1 0 6Q-1 1 -6 0Q-1 -1 0 -6Z';   // a 4-point glint
+
+  // One jar picture with `stars` stars in the heap. Stars from index `fresh`
+  // on are new: they drop onto the heap (CSS .jar-star-new).
+  function jarSvg(stars, size, cls, fresh) {
     var svg = el('svg', { viewBox: '0 0 100 124', class: cls || 'jar-svg', 'aria-hidden': 'true' });
     svg.appendChild(el('rect', { x: 20, y: 4, width: 60, height: 16, rx: 6, fill: '#ff5a5f', stroke: '#2b3a55', 'stroke-width': 4 }));
     svg.appendChild(el('rect', { x: 26, y: 18, width: 48, height: 10, fill: '#ffd8d9', stroke: '#2b3a55', 'stroke-width': 4 }));
     svg.appendChild(el('path', { d: 'M18 28h64q12 0 12 12v68q0 12-12 12H18q-12 0-12-12V40q0-12 12-12z', fill: '#e8f6ff', stroke: '#2b3a55', 'stroke-width': 4, 'class': 'jar-glass' }));
-    for (var i = 0; i < Math.min(stars, size); i++) {
-      var s = SLOTS[i];
-      svg.appendChild(el('use', { href: '#i-star', x: s[0], y: s[1], width: 20, height: 20, 'class': 'jar-star' }));
+    svg.appendChild(el('ellipse', { cx: 50, cy: 111, rx: 36, ry: 5, fill: '#c6e3f7' }));   // the jar's floor
+    var n = Math.min(stars, size, PILE.length);
+    for (var i = 0; i < n; i++) {
+      var s = PILE[i];
+      var drop = el('g', { 'class': 'jar-star-drop' + (fresh !== undefined && i >= fresh ? ' jar-star-new' : '') });
+      if (fresh !== undefined && i >= fresh) drop.style.animationDelay = ((i - fresh) * 0.12) + 's';
+      var g = el('g', { transform: 'translate(' + s.x.toFixed(1) + ' ' + s.y.toFixed(1) + ') rotate(' + s.r.toFixed(0) + ')' });
+      g.appendChild(el('use', { href: '#i-star', x: -s.s / 2, y: -s.s / 2, width: s.s, height: s.s, 'class': 'jar-star', style: 'fill:' + s.c }));
+      g.appendChild(el('circle', { cx: -2.5, cy: -3, r: 1.6, fill: '#fff', opacity: 0.85 }));   // a little shine
+      drop.appendChild(g);
+      svg.appendChild(drop);
+    }
+    // Two glints twinkle near the top of the heap (still with reduced motion).
+    if (n && cls && cls.indexOf('jar-main') >= 0) {
+      var top = PILE[n - 1], low = PILE[Math.max(0, n - 3)];
+      [[top.x + 9, top.y - 10, 1], [Math.max(low.x, top.x) + 14, low.y - 4, 0.7]].forEach(function (p, k) {
+        svg.appendChild(el('path', { d: SPARK, transform: 'translate(' + p[0].toFixed(1) + ' ' + p[1].toFixed(1) + ') scale(' + p[2] + ')',
+                                     fill: '#fff', stroke: '#ffd43b', 'stroke-width': 1, 'class': 'jar-glint jar-glint-' + k }));
+      });
     }
     svg.appendChild(el('rect', { x: 14, y: 36, width: 6, height: 56, rx: 3, fill: '#fff', opacity: 0.8 }));
     return svg;
   }
 
-  function render(box, state) {
+  function render(box, state, fresh) {
     if (!box) return;
     var j = state || Progress.jar();
     box.textContent = '';
     box.dataset.stars = String(j.stars);
     box.dataset.full = String(j.full);
-    box.appendChild(jarSvg(j.stars, j.size || Progress.lib.JAR_SIZE, 'jar-svg jar-main'));
+    box.appendChild(jarSvg(j.stars, j.size || Progress.lib.JAR_SIZE, 'jar-svg jar-main', fresh));
     if (j.full) {
       var shelf = document.createElement('span');
       shelf.className = 'jar-shelf';
-      for (var i = 0; i < Math.min(j.full, SHELF_MAX); i++) shelf.appendChild(jarSvg(99, SLOTS.length, 'jar-svg jar-mini'));
+      for (var i = 0; i < Math.min(j.full, SHELF_MAX); i++) shelf.appendChild(jarSvg(99, PILE.length, 'jar-svg jar-mini'));
       if (j.full > SHELF_MAX) {
         var plus = el('svg', { viewBox: '0 0 48 48', class: 'jar-plus', 'aria-hidden': 'true' });
         plus.appendChild(el('use', { href: '#i-plus' }));
@@ -102,13 +136,13 @@
     function landed() {
       if (res.filled) {
         // Show it full for a moment, celebrate, then the new jar.
-        render(box, { stars: Progress.lib.JAR_SIZE, full: res.before.full, size: Progress.lib.JAR_SIZE });
+        render(box, { stars: Progress.lib.JAR_SIZE, full: res.before.full, size: Progress.lib.JAR_SIZE }, res.before.stars);
         Fx.sound('star');
         Fx.move(box.querySelector('.jar-main'), 'cheer');
         box.classList.add('jar-celebrate');
         setTimeout(function () { box.classList.remove('jar-celebrate'); render(box); renderAll(); }, 1600);
       } else {
-        render(box);
+        render(box, null, res.before.stars);
         Fx.move(box.querySelector('.jar-main'), 'wiggle');
         renderAll();
       }
@@ -117,17 +151,5 @@
     return res;
   }
 
-  // Small overlay jar for rounds without a result screen (card deck done).
-  var popTimer;
-  function pop(n, fromEl) {
-    var o = document.getElementById('jarPop');
-    o.hidden = false;
-    clearTimeout(popTimer);
-    var box = o.querySelector('.jar-box');
-    var res = drop(n, fromEl ? [fromEl] : [], box);
-    popTimer = setTimeout(function () { o.hidden = true; }, res.filled ? 3400 : 2400);
-    return res;
-  }
-
-  window.Jar = { render: render, renderAll: renderAll, drop: drop, pop: pop };
+  window.Jar = { render: render, renderAll: renderAll, drop: drop };
 })();

@@ -72,7 +72,7 @@ def axe_screens(base, axe_js):
             for game in ("listen", "match", "memory"):
                 page.click(f'.game-card[data-game="{game}"]'); check(f"game {game}")
                 page.click("#play [data-go]")
-            page.evaluate("() => Games.cardsDone([])"); check("result")
+            page.evaluate("() => Games.showResult(3, [])"); check("result")
             page.click("#result [data-go=home]")
             page.click("#phrasesBtn", force=True); check("phrase area")
             page.click('#phraseGrid .theme-card[data-theme="phrases"]'); check("phrase cards")

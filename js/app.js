@@ -172,7 +172,6 @@
   }
 
   function openDeck(list, kind) {
-    state.reviewing = false;
     state.list = list;
     state.i = 0;
     setDeck(kind);
@@ -193,7 +192,6 @@
   function reviewCards(list, intro) {
     state.list = list;
     state.i = 0;
-    state.reviewing = true;
     setDeck('words');
     show('cards');
     renderCard(0);
@@ -240,20 +238,14 @@
     var next = state.i + delta;
     if (next < 0) return;
     if (next >= n) {
-      if (state.reviewing) {
-        // Looked through today's review words: stars and the jar.
-        state.reviewing = false;
-        Games.cardsDone(state.list.slice());
-        return;
-      }
-      // Finished the deck: fanfare, praise, a star for the jar, then start again.
+      // Finished the deck (word, phrase or review cards): a cheer and praise,
+      // then start again. No stars: Tim (phase 9) keeps them for games.
       next = 0;
       state.i = next;
       renderCard(delta);
       Fx.sound('star');
       Fx.move($('#picImg'), 'cheer');
       Speech.zh('cards.done');
-      Jar.pop(1, $('#picImg'));
       speakCurrent(true);
       return;
     }

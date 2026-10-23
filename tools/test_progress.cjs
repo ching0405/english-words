@@ -202,7 +202,9 @@ test('theme stars only go up, even when a known word is missed', () => {
   const hw = WORDS.filter(w => w.theme === 'halloween');
   assert.equal(p.themeStars(WORDS, 'halloween'), 0);
   p.seen(hw[0].id);
-  assert.equal(p.themeStars(WORDS, 'halloween'), 1);
+  assert.equal(p.themeStars(WORDS, 'halloween'), 0, 'looking at a card earns no star');
+  p.played(hw[0].id);
+  assert.equal(p.themeStars(WORDS, 'halloween'), 1, 'playing it in a game does');
   // Answer right on due days until the word reaches box 2 ("known").
   const learn = id => { p.answer(id, true); while (p.get(id).box < 2) { clock.t = Math.max(clock.t, p.get(id).due) + HOUR; p.answer(id, true); } };
   hw.forEach(w => learn(w.id));
@@ -271,7 +273,7 @@ test('version-1 saves are migrated to the current format', () => {
   const { p, store } = setup({ [P.KEY]: JSON.stringify(v1) });
   const saved = JSON.parse(store.getItem(P.KEY));
   assert.equal(saved.version, P.VERSION);
-  assert.deepEqual(p.get('goat'), { seen: 3, right: 2, wrong: 0, last, box: 2, due: P.dayAfter(last, 2) });
+  assert.deepEqual(p.get('goat'), { seen: 3, right: 2, wrong: 0, played: 0, last, box: 2, due: P.dayAfter(last, 2) });
   assert.equal(p.get('cow').box, 0);
   assert.deepEqual(p.jar(), { stars: 0, full: 0, size: P.JAR_SIZE });
   assert.equal(store.getItem(P.BROKEN_KEY), null);
@@ -300,7 +302,7 @@ test('broken saves are set aside and replaced by a fresh start', () => {
 test('bad fields inside a good save are repaired, good words kept', () => {
   const raw = JSON.stringify({ version: 3, words: { goat: { seen: 2, right: 'x', wrong: -3, box: 99, due: null }, cow: 'oops', lion: { seen: 1, right: 1, wrong: 0, last: T0, box: 1, due: P.dayAfter(T0, 1) } } });
   const { p } = setup({ [P.KEY]: raw });
-  assert.deepEqual(p.get('goat'), { seen: 2, right: 0, wrong: 0, last: 0, box: 5, due: 0 });
+  assert.deepEqual(p.get('goat'), { seen: 2, right: 0, wrong: 0, played: 0, last: 0, box: 5, due: 0 });
   assert.equal(p.get('cow'), null);
   assert.equal(p.get('lion').box, 1);
 });
@@ -372,4 +374,16 @@ test('forget reports whether the deletion was saved (F2)', () => {
   assert.equal(p.forget(['my_word_dog'], []), false, 'a failed save is reported, not swallowed');
   store.setItem = real;
   assert.ok(JSON.parse(store.dump()[P.KEY]).words.my_word_dog, 'the record is still on disk, so the caller must know');
+});
+
+test('phase 9: an older save keeps the theme star it earned by looking at cards', () => {
+  // Saved before phase 9: animals got 1 star from cards only (seen, never played).
+  const old = { version: 3, words: { goat: { seen: 2, right: 0, wrong: 0, last: T0 - HOUR, box: 0, due: T0 + 10 * HOUR } },
+    best: { animals: 1 }, jar: { stars: 4, full: 0 }, reviewTurn: 0 };
+  const { p } = setup({ 'ew.progress': JSON.stringify(old) });
+  assert.equal(p.themeStars(WORDS, 'animals'), 1, 'not taken back');
+  assert.equal(p.get('goat').played, 0);
+  assert.deepEqual(p.jar(), { stars: 4, full: 0, size: P.JAR_SIZE }, 'jar stars kept');
+  p.seen('cow');
+  assert.equal(p.themeStars(WORDS, 'halloween'), 0, 'new looking still earns nothing');
 });

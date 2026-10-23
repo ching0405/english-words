@@ -1018,18 +1018,22 @@ def start_review(run, page, name, mode, want_intro):
 
 
 def play_review_cards(run, page, name, shots):
-    """Look through the review words in card mode; ends on the result screen."""
+    """Look through the review words in card mode. Like any deck (phase 9): praise,
+    back to the first card, no stars and no result screen."""
     seen = []
-    while page.is_hidden("#result"):
+    n = int(page.inner_text("#progress").split("/")[1])
+    jar = page.evaluate("() => Progress.jar()")
+    for i in range(n):
         seen.append(BY_EN[page.inner_text("#wordEn")])
-        if len(seen) == 1 and shots:
+        if i == 0 and shots:
             shot(page, f"{name}-review-cards", QA3)
+        a = audios(page)
         page.click("#nextBtn")
         page.wait_for_timeout(150)
-        if len(seen) > 12:
-            break
-    stars = wait_result(page)
-    run.check(stars == 3, f"[{name}/review-cards] looked through {len(seen)} cards -> {stars} stars")
+    page.wait_for_timeout(1200)
+    run.check(zh_said(page, a, "cards.done") and not zh_said(page, a, "jar.more") and page.is_hidden("#result")
+              and page.inner_text("#progress") == f"1 / {n}" and page.evaluate("() => Progress.jar()") == jar,
+              f"[{name}/review-cards] looked through {len(seen)} cards: praise, start again, no stars")
     return seen
 
 
@@ -1052,22 +1056,21 @@ def progress_flow(run, browser, base, name, opts, words):
               f"[{name}] new device: 0 stars, nothing to review, empty jar")
     shot(page, f"{name}-themes-new", QA3)
 
-    # Look at every animal card; finishing the deck drops a star in the jar.
+    # Look at every animal card: praise, but stars are only for games (Tim, phase 9).
     page.click('.theme-card[data-theme="animals"]')
     for _ in animals[1:]:
         page.click("#nextBtn")
     a = audios(page)
     page.click("#nextBtn")
     page.wait_for_timeout(1400)
-    run.check(not page.is_hidden("#jarPop") and zh_said(page, a, "jar.more"), f"[{name}] finishing the deck: a star flies into the jar")
-    if big:
-        shot(page, f"{name}-deck-jar", QA3)
-    run.check(page.evaluate("() => Progress.jar().stars") == 1, f"[{name}] the jar has 1 star")
+    run.check(zh_said(page, a, "cards.done") and not zh_said(page, a, "jar.more") and not page.locator(".flying-star").count(),
+              f"[{name}] finishing the deck: praise, no star flies to the jar")
+    run.check(page.evaluate("() => Progress.jar().stars") == 0, f"[{name}] the jar is still empty")
     page.click('#cards [data-go="themes"]')
     page.wait_for_timeout(200)
     st = page.evaluate(STATE)
     saved = json.loads(st["saved"])
-    run.check(st["stars"]["animals"] == 1 and st["stars"]["halloween"] == 0, f"[{name}] after the animal cards: animals 1 star {st['stars']}")
+    run.check(st["stars"]["animals"] == 0 and st["stars"]["halloween"] == 0, f"[{name}] after the animal cards: no theme star yet {st['stars']}")
     run.check(all(saved["words"].get(i, {}).get("seen", 0) >= 1 for i in animals) and saved["version"] == 3,
               f"[{name}] every animal card recorded as seen (save version {saved['version']})")
     run.check(st["due"] == 0, f"[{name}] cards just seen are not due today")
@@ -1076,7 +1079,7 @@ def progress_flow(run, browser, base, name, opts, words):
     page.reload()
     page.wait_for_selector("#startBtn:not([disabled])")
     st = to_themes(page)
-    run.check(st["stars"]["animals"] == 1 and json.loads(st["saved"]) == saved and st["jarShown"] == [[1, 0]],
+    run.check(st["stars"]["animals"] == 0 and json.loads(st["saved"]) == saved and st["jarShown"] == [[0, 0]],
               f"[{name}] progress and star jar kept after reloading the page")
 
     # Nothing due: kind message, a listen practice round of the words never met.
@@ -1086,7 +1089,8 @@ def progress_flow(run, browser, base, name, opts, words):
     run.check(halloween <= set(asked), f"[{name}] practice picks the words never met first {asked}")
     st = back_to_themes(page)
     rec = json.loads(st["saved"])["words"]
-    run.check(st["jar"]["stars"] == 1 + 3, f"[{name}] the jar got the round's 3 stars ({st['jar']})")
+    run.check(st["jar"]["stars"] == 3, f"[{name}] the jar got the round's 3 stars ({st['jar']})")
+    run.check(st["stars"]["halloween"] >= 1, f"[{name}] playing the words in a game gives the theme its first star {st['stars']}")
     missed = asked[0]
     run.check(rec[missed]["wrong"] == 1 and rec[missed]["box"] == 0 and rec[missed]["due"] == taipei(2026, 10, 23),
               f"[{name}] missed word ({missed}): asked again, then due tomorrow 0:00 — not 5 minutes later")
@@ -1131,9 +1135,8 @@ def progress_flow(run, browser, base, name, opts, words):
     expected = start_review(run, page, name, "cards", "review.intro")
     seen = play_review_cards(run, page, name, big or name == "ipad-landscape")
     run.check(seen == expected or set(seen) == set(expected), f"[{name}] card review shows every review word once {seen}")
-    friend = page.get_attribute("#resultFriend", "data-word")
-    run.check(friend in seen, f"[{name}] the result friend is a word from this round ({friend})")
-    st = back_to_themes(page)
+    page.click('#cards [data-go="themes"]')
+    page.wait_for_selector("#themes:not([hidden])")
     expected = start_review(run, page, name, "listen", "review.intro")
     run.check(True, f"[{name}] after cards the turn comes back to listen")
     page.click('#play [data-go="themes"]')
@@ -1153,19 +1156,20 @@ def progress_flow(run, browser, base, name, opts, words):
     if big:
         shot(page, f"{name}-themes-jar-nearly-full", QA3)
     a = audios(page)
-    page.click('.theme-card[data-theme="halloween"]')
-    for _ in range(4):
-        page.click("#nextBtn")
-    page.click("#nextBtn")   # deck done: +1 star fills the jar
+    page.click("#gamesBtn", force=True)
+    page.wait_for_selector("#games:not([hidden])")
+    open_game(page, "listen")
+    play_listen(run, page, name, "jar-fill", False, QA3)   # a game round: its stars fill the jar
     page.wait_for_timeout(1200)
-    run.check(zh_said(page, a, "jar.full") and page.evaluate("() => Progress.jar()") == {"stars": 0, "full": 1, "size": 12},
-              f"[{name}] the jar fills, celebrates and a new one starts")
+    jar = page.evaluate("() => Progress.jar()")
+    run.check(zh_said(page, a, "jar.full") and jar["full"] == 1 and jar["stars"] < 3,
+              f"[{name}] the jar fills, celebrates and a new one starts {jar}")
     if big or name == "ipad-landscape":
         shot(page, f"{name}-jar-full", QA3)
     page.wait_for_timeout(2600)
-    page.click('#cards [data-go="themes"]')
-    st = page.evaluate(STATE)
-    run.check(st["jarShown"] == [[0, 1]], f"[{name}] themes show the new empty jar next to the full one")
+    page.click('#result [data-go="home"]')
+    st = to_themes(page)
+    run.check(st["jarShown"] == [[jar["stars"], 1]], f"[{name}] themes show the new jar next to the full one {st['jarShown']}")
     if big:
         shot(page, f"{name}-themes-jar-shelf", QA3)
 
@@ -1188,7 +1192,8 @@ def progress_flow(run, browser, base, name, opts, words):
     page.click('.theme-card[data-theme="halloween"]')
     page.click('#cards [data-go="themes"]')
     st = page.evaluate(STATE)
-    run.check(st["stars"]["halloween"] == 1, f"[{name}] after the reset, progress saves again")
+    hw = [w["id"] for w in words if w["theme"] == "halloween"][0]
+    run.check(json.loads(st["saved"])["words"].get(hw, {}).get("seen") == 1, f"[{name}] after the reset, progress saves again")
     lay_errors = page.evaluate(LAYOUT_CHECK, MIN_TAP["ipad" if name.startswith("ipad") else "phone"])
     run.check(not lay_errors, f"[{name}] themes screen layout {lay_errors if lay_errors else ''}".rstrip())
     run.check(not zh_tts(page), f"[{name}] progress: every Chinese line came from a recording {zh_tts(page)}")
@@ -1261,9 +1266,45 @@ def legacy_case(run, browser, base, name, opts):
     ctx.close()
 
 
+def jar_case(run, browser, base, name, opts):
+    """Phase 9 jar: stars lie in a heap (not a grid) inside the glass, the same
+    heap on every draw, and only the new stars of a round drop in."""
+    errors = []
+    ctx, page = open_site(browser, base, opts, {"lateMs": 0, "event": True}, errors)
+    tag = f"[{name}/jar]"
+    info = page.evaluate(r"""() => {
+      const box = document.createElement('div'); box.className = 'jar-box result-jar'; document.body.appendChild(box);
+      const read = () => [...box.querySelectorAll('.jar-main .jar-star-drop > g')].map(g => g.getAttribute('transform'));
+      Jar.render(box, {stars: 11, full: 0, size: 12}); const a = read();
+      Jar.render(box, {stars: 11, full: 0, size: 12}); const b = read();
+      const glass = box.querySelector('.jar-glass').getBoundingClientRect();
+      const inside = [...box.querySelectorAll('.jar-main .jar-star')].every(u => { const r = u.getBoundingClientRect();
+        return r.left >= glass.left - 1 && r.right <= glass.right + 1 && r.top >= glass.top - 1 && r.bottom <= glass.bottom + 1; });
+      const xy = a.map(t => t.match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1).map(Number));
+      const rot = new Set(a.map(t => t.match(/rotate\(([-\d.]+)\)/)[1])).size;
+      const ys = xy.map(p => p[1]), rows = new Set(ys.map(y => Math.round(y))).size;
+      Jar.render(box, {stars: 11, full: 0, size: 12}, 8);
+      const fresh = box.querySelectorAll('.jar-main .jar-star-new').length;
+      box.remove();
+      return {n: a.length, same: JSON.stringify(a) === JSON.stringify(b), inside, rot, rows, fresh, lowFirst: ys[0] > ys[ys.length - 1]};
+    }""")
+    run.check(info["n"] == 11 and info["inside"], f"{tag} 11 stars, all inside the glass {info}")
+    run.check(info["same"], f"{tag} the heap is the same on every draw (a star never jumps)")
+    run.check(info["rot"] >= 8 and info["rows"] >= 8 and info["lowFirst"], f"{tag} a heap from the bottom up, turned and placed unevenly, not a grid {info}")
+    run.check(info["fresh"] == 3, f"{tag} only the round's new stars drop in ({info['fresh']} of 3)")
+    reduced = page.evaluate("""() => matchMedia('(prefers-reduced-motion: reduce)').matches""")
+    if not reduced:
+        page.emulate_media(reduced_motion="reduce")
+    still = page.evaluate("""() => { const box = document.createElement('div'); box.className = 'jar-box'; document.body.appendChild(box);
+      Jar.render(box, {stars: 5, full: 0, size: 12}, 3); const n = box.querySelector('svg').getAnimations({subtree: true}).length; box.remove(); return n; }""")
+    run.check(still == 0, f"{tag} reduced motion: no dropping or twinkling ({still} animations)")
+    run.check(not errors, f"{tag} no errors {errors}")
+    ctx.close()
+
+
 def phrase_deck(run, page, name, phrases):
     """Phrase cards (phase 8): the #cards screen, like word cards. Every phrase in
-    data order, slow en-US, arrows and the end of the deck give a jar star."""
+    data order, slow en-US, arrows; the end of the deck praises but gives no star (phase 9)."""
     tag = f"[{name}/phrase cards]"
     jar0 = page.evaluate("() => Progress.snapshot().jar")
     since = calls(page)
@@ -1293,12 +1334,12 @@ def phrase_deck(run, page, name, phrases):
     page.wait_for_function("(t) => document.querySelector('#progress').textContent === t", arg=f"1 / {n}")
     page.wait_for_timeout(1200)
     jar = page.evaluate("() => Progress.snapshot().jar")
-    run.check(jar["full"] * 12 + jar["stars"] == jar0["full"] * 12 + jar0["stars"] + 1, f"{tag} whole deck seen: one star in the jar {jar0} -> {jar}")
-    run.check(zh_said(page, 0, "cards.done"), f"{tag} whole deck seen: recorded praise")
+    run.check(jar == jar0, f"{tag} whole deck seen: no star in the jar (stars are for games) {jar0} -> {jar}")
+    run.check(zh_said(page, 0, "cards.done") and not zh_said(page, 0, "jar.more"), f"{tag} whole deck seen: recorded praise, no jar line")
     page.click("#cards .bar [data-go]")
     page.wait_for_selector("#phrases:not([hidden])")
     stars = page.get_attribute('#phraseGrid .theme-card[data-theme="phrases"] .theme-stars', "data-stars")
-    run.check(stars == "1", f"{tag} the phrase card shows one star after a look-through ({stars})")
+    run.check(stars == "0", f"{tag} looking through gives the phrase card no star ({stars})")
 
 
 def phrases_flow(run, browser, base, name, opts):
@@ -1435,10 +1476,14 @@ def phrases_flow(run, browser, base, name, opts):
     snapshot=page.evaluate('() => Progress.snapshot()')
     run.check(all(snapshot['words'].get(p['id'],{}).get('seen',0)>0 for p in phrases),f'[{name}] phrase progress saved separately')
     run.check(any(r.get('wrong',0) for id,r in snapshot['words'].items() if id.startswith('phrase_')),f'[{name}] wrong phrases recorded')
-    run.check(snapshot['jar']['full']*12+snapshot['jar']['stars']==10,f'[{name}] three game rounds give three stars each and the card deck one, in the shared jar')
+    run.check(snapshot['jar']['full']*12+snapshot['jar']['stars']==9,f'[{name}] three game rounds give three stars each in the shared jar; the card deck none')
     page.reload()
     page.wait_for_selector('#phrasesBtn:not([disabled])')
     run.check(page.evaluate('() => Progress.snapshot()')==snapshot,f'[{name}] phrase records and stars persist after reload')
+    page.click('#phrasesBtn',force=True)
+    page.wait_for_selector('#phrases:not([hidden])')
+    stars=page.get_attribute('#phraseGrid .theme-card[data-theme="phrases"] .theme-stars','data-stars')
+    run.check(stars=='1',f'[{name}] after playing phrase games the phrase card shows its first star ({stars})')
     run.check(not zh_tts(page),f'[{name}] phrases Chinese mp3 only')
     run.check(not errors,f'[{name}] phrases no console errors/404 {errors}')
     ctx.close()
@@ -1755,7 +1800,7 @@ def a11y_flow(run, browser, base, name, opts):
             tab_to(page, ".choices .pick")  # focus a picture without answering
             shot(page, f"{name}-focus-listen", QA7)
         go("#play [data-go]", "games", f"{game} -> menu")
-    page.evaluate("() => Games.cardsDone([])")  # the result screen opens by itself after a round
+    page.evaluate("() => Games.showResult(3, [])")  # the result screen opens by itself after a round
     page.wait_for_selector("#result:not([hidden])")
     info = page.evaluate(FOCUS_INFO)
     run.check(info and info["where"] == "result", f"{tag} a round ends: focus moves onto the result screen ({info and info['id']})")
@@ -1832,7 +1877,7 @@ def motion_case(run, browser, base, name, opts, reduce):
     page.wait_for_timeout(220)
     stars, n = page.locator(".burst-star").count(), page.evaluate(MOVING, None)
     run.check(want(stars) and want(n), f"{tag} right answer: {stars} burst stars, {n} moving animations")
-    page.evaluate("() => Games.cardsDone([])")
+    page.evaluate("() => Games.showResult(3, [])")
     page.wait_for_selector("#result:not([hidden])")
     page.wait_for_timeout(300)
     run.check(page.locator("#resultStars > *").count() > 0, f"{tag} result: the stars are still shown")
@@ -2112,6 +2157,7 @@ def main():
                     progress_flow(run, browser, base, name, VIEWPORTS[name], words)
                 for name in ("ipad-portrait", "ipad-landscape", "ipad-pro"):
                     legacy_case(run, browser, base, name, VIEWPORTS[name])
+                    jar_case(run, browser, base, name, VIEWPORTS[name])
             if "phrases" in parts:
                 phrase_sheet(browser, base)
                 phrase_voice_cases(run, browser, base)

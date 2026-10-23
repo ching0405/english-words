@@ -1,0 +1,51 @@
+[
+  {
+    "id": "phrase_thank_you",
+    "english": "Thank you.",
+    "chinese": "謝謝",
+    "category": "manners",
+    "image": "images/phrases/thank_you.svg"
+  },
+  {
+    "id": "phrase_goodbye",
+    "english": "Goodbye.",
+    "chinese": "再見",
+    "category": "greetings",
+    "image": "images/phrases/goodbye.svg"
+  },
+  {
+    "id": "phrase_your_name",
+    "english": "What is your name?",
+    "chinese": "你叫什麼名字？",
+    "category": "introductions",
+    "image": "images/phrases/your_name.svg"
+  },
+  {
+    "id": "phrase_ready",
+    "english": "I am ready.",
+    "chinese": "我準備好了",
+    "category": "classroom",
+    "image": "images/phrases/ready.svg"
+  },
+  {
+    "id": "phrase_hello",
+    "english": "Hello.",
+    "chinese": "你好",
+    "category": "greetings",
+    "image": "images/phrases/hello.svg"
+  },
+  {
+    "id": "phrase_sorry",
+    "english": "Sorry.",
+    "chinese": "對不起",
+    "category": "manners",
+    "image": "images/phrases/sorry.svg"
+  },
+  {
+    "id": "phrase_please",
+    "english": "Please.",
+    "chinese": "請",
+    "category": "manners",
+    "image": "images/phrases/please.svg"
+  }
+]

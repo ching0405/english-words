@@ -1,0 +1,16 @@
+[
+  {
+    "id": "animals",
+    "english": "Animals",
+    "chinese": "動物",
+    "color": "#9ddc8c",
+    "icon": "images/words/lion.svg"
+  },
+  {
+    "id": "halloween",
+    "english": "Halloween",
+    "chinese": "萬聖節",
+    "color": "#c9a8ff",
+    "icon": "images/words/pumpkin.svg"
+  }
+]

@@ -1,0 +1,15 @@
+[
+  {"id": "goat", "english": "goat", "chinese": "山羊", "image": "images/words/goat.svg", "theme": "animals"},
+  {"id": "cow", "english": "cow", "chinese": "乳牛", "image": "images/words/cow.svg", "theme": "animals"},
+  {"id": "koala", "english": "koala", "chinese": "無尾熊", "image": "images/words/koala.svg", "theme": "animals"},
+  {"id": "lion", "english": "lion", "chinese": "獅子", "image": "images/words/lion.svg", "theme": "animals"},
+  {"id": "zebra", "english": "zebra", "chinese": "斑馬", "image": "images/words/zebra.svg", "theme": "animals"},
+  {"id": "wolf", "english": "wolf", "chinese": "狼", "image": "images/words/wolf.svg", "theme": "animals"},
+  {"id": "rabbit", "english": "rabbit", "chinese": "兔子", "image": "images/words/rabbit.svg", "theme": "animals"},
+  {"id": "turtle", "english": "turtle", "chinese": "烏龜", "image": "images/words/turtle.svg", "theme": "animals"},
+  {"id": "vampire", "english": "vampire", "chinese": "吸血鬼", "image": "images/words/vampire.svg", "theme": "halloween"},
+  {"id": "zombie", "english": "zombie", "chinese": "殭屍", "image": "images/words/zombie.svg", "theme": "halloween"},
+  {"id": "witch", "english": "witch", "chinese": "女巫", "image": "images/words/witch.svg", "theme": "halloween"},
+  {"id": "pumpkin", "english": "pumpkin", "chinese": "南瓜", "image": "images/words/pumpkin.svg", "theme": "halloween"},
+  {"id": "monster", "english": "monster", "chinese": "怪獸", "image": "images/words/monster.svg", "theme": "halloween"}
+]

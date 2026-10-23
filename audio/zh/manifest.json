@@ -1,0 +1,162 @@
+{
+  "themes.pick": {
+    "text": "你想看哪一種？點一張圖片。",
+    "hash": "c1d3caaea5f0ea28"
+  },
+  "cards.howto": {
+    "text": "點圖片可以再聽一次，點箭頭看下一張。",
+    "hash": "cc61c2f78efdfda9"
+  },
+  "cards.done": {
+    "text": "全部看完了，好棒！我們再看一次。",
+    "hash": "5295cfc4ae9baa67"
+  },
+  "games.pick": {
+    "text": "想玩哪一個遊戲？點一張圖片。",
+    "hash": "daf93dcf0d08f15a"
+  },
+  "games.all": {
+    "text": "全部的字",
+    "hash": "c3ef545075396aee"
+  },
+  "intro.listen": {
+    "text": "聽一聽，找出對的圖片。",
+    "hash": "e0598f6e0e6fed2e"
+  },
+  "intro.match": {
+    "text": "點喇叭聽一聽，再連到對的圖片。",
+    "hash": "c79b0c3aec8bc60b"
+  },
+  "intro.memory": {
+    "text": "翻開兩張卡片，找出一樣的圖片。",
+    "hash": "5b4b8f9a02d4e313"
+  },
+  "match.speaker_first": {
+    "text": "先點喇叭聽一聽喔。",
+    "hash": "1e9d059e47c9c912"
+  },
+  "match.next_board": {
+    "text": "再一次！",
+    "hash": "be58d7dd7b1953c3"
+  },
+  "game.try_again": {
+    "text": "再聽一次喔。",
+    "hash": "8721524bed051ff2"
+  },
+  "praise.1": {
+    "text": "答對了！",
+    "hash": "8fd15695fb67e080"
+  },
+  "praise.2": {
+    "text": "好棒！",
+    "hash": "a941092285fa87eb"
+  },
+  "praise.3": {
+    "text": "你好厲害！",
+    "hash": "d3bb0ebacfb830b4"
+  },
+  "praise.4": {
+    "text": "太棒了！",
+    "hash": "6bab2fd6f5524b9e"
+  },
+  "stars.1": {
+    "text": "你拿到一顆星星！",
+    "hash": "8d8c03170f240af5"
+  },
+  "stars.2": {
+    "text": "你拿到兩顆星星！",
+    "hash": "f62e7457a04d16ff"
+  },
+  "stars.3": {
+    "text": "你拿到三顆星星！好棒！",
+    "hash": "738ba1aba2cbbd59"
+  },
+  "review.intro": {
+    "text": "今天要複習的字來囉！",
+    "hash": "d1817b8c7352a507"
+  },
+  "review.none": {
+    "text": "今天的字都複習好了！我們再多練習幾個。",
+    "hash": "1325992439ee4d26"
+  },
+  "jar.more": {
+    "text": "星星罐又變滿一點了！",
+    "hash": "85d2d41e3c35d067"
+  },
+  "jar.full": {
+    "text": "星星罐裝滿了！好棒！我們換一個新的罐子。",
+    "hash": "bf18ebe182a0a082"
+  },
+  "jar.look": {
+    "text": "這是你的星星罐，玩完一輪就會放進星星喔！",
+    "hash": "b009502d73177a60"
+  },
+  "game.ask_again": {
+    "text": "剛剛那個字，再聽一次，找出對的圖片。",
+    "hash": "c4280e78cfe1c2e3"
+  },
+  "phrases.pick": {
+    "text": "選一個玩吧！",
+    "hash": "dc0b311d97b7692c"
+  },
+  "phrases.cards": {
+    "text": "點圖片聽一聽，再按箭頭。",
+    "hash": "22e3f65969d29f25"
+  },
+  "phrases.listen": {
+    "text": "聽英文，找出對的圖。",
+    "hash": "319a4270f63a4d3f"
+  },
+  "phrases.order": {
+    "text": "字卡點一下聽，再點一下放。",
+    "hash": "5683e529d9223ec1"
+  },
+  "phrases.review": {
+    "text": "複習句子，找出對的圖。",
+    "hash": "e0a7efa09d6514cd"
+  },
+  "phrases.review_done": {
+    "text": "句子複習完成，好棒！",
+    "hash": "af30a37d38b00903"
+  },
+  "words.pick": {
+    "text": "單字！選圖片看卡片，或點星星玩遊戲。",
+    "hash": "c108f9bfafe898ed"
+  },
+  "zh.phrase_thank_you": {
+    "text": "謝謝",
+    "hash": "cde1a95abd80bd0f"
+  },
+  "zh.phrase_goodbye": {
+    "text": "再見",
+    "hash": "517a996fa04b1775"
+  },
+  "zh.phrase_your_name": {
+    "text": "你叫什麼名字？",
+    "hash": "dd4cd2139d5c5324"
+  },
+  "zh.phrase_ready": {
+    "text": "我準備好了",
+    "hash": "421dedc8a45e7497"
+  },
+  "zh.phrase_hello": {
+    "text": "你好",
+    "hash": "55b613c6f5b4abda"
+  },
+  "zh.phrase_sorry": {
+    "text": "對不起",
+    "hash": "429cc6c889aa1dd2"
+  },
+  "zh.phrase_please": {
+    "text": "請",
+    "hash": "722fc06d239858e1"
+  },
+  "theme.animals": {
+    "text": "動物",
+    "hash": "e9e2dc2c89e9ca4c"
+  },
+  "theme.halloween": {
+    "text": "萬聖節",
+    "hash": "40706cd64d56e309"
+  }
+}

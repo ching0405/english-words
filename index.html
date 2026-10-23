@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffd43b">
+<meta name="description" content="給還不識字的小朋友：看圖、聽聲音學英文單字和句子。">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="看圖學英文">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>看圖學英文 Picture Words</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 48 48"><path d="M8 22 24 8l16 14M13 19v20h22V19M20 39V28h8v11"/></symbol>
+  <symbol id="i-back" viewBox="0 0 48 48"><path d="M28 10 14 24l14 14M15 24h22"/></symbol>
+  <symbol id="i-prev" viewBox="0 0 48 48"><path d="M30 8 14 24l16 16"/></symbol>
+  <symbol id="i-next" viewBox="0 0 48 48"><path d="M18 8l16 16-16 16"/></symbol>
+  <symbol id="i-again" viewBox="0 0 48 48"><path d="M38 24a14 14 0 1 1-4.1-9.9M36 6v9h-9"/></symbol>
+  <symbol id="i-play" viewBox="0 0 48 48"><path d="M16 9v30l24-15z"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 48 48"><path d="M8 18h8l11-9v30l-11-9H8zM33 17a9 9 0 0 1 0 14M37 11a17 17 0 0 1 0 26"/></symbol>
+  <symbol id="i-cards" viewBox="0 0 48 48"><path d="M10 12h22v28H10zM17 8h22v28"/></symbol>
+  <symbol id="i-games" viewBox="0 0 48 48"><path d="M24 6l5 11 12 1-9 8 3 12-11-6-11 6 3-12-9-8 12-1z"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 48 48"><path d="M8 8h13v13H8zM27 8h13v13H27zM8 27h13v13H8zM27 27h13v13H27z"/></symbol>
+  <!-- Game pictures for the game menu (coloured, same style as the word art). -->
+  <symbol id="g-listen" viewBox="0 0 160 160"><g stroke="#2b3a55" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M14 58h20l26-22v88l-26-22H14z" fill="#ffd43b"/><path d="M72 62a22 22 0 0 1 0 36M82 50a38 38 0 0 1 0 60" fill="none"/>
+    <rect x="96" y="22" width="48" height="48" rx="12" fill="#fff"/><rect x="96" y="90" width="48" height="48" rx="12" fill="#fff"/>
+    <circle cx="120" cy="46" r="13" fill="#ff9f43"/><path d="M108 114l12-14 12 14z" fill="#5ccf6a"/>
+<path d="M134 56l6 6 12-14" fill="none" stroke="#5ccf6a" stroke-width="7"/></g></symbol>
+  <symbol id="g-match" viewBox="0 0 160 160"><g stroke="#2b3a55" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M40 46C80 46 80 112 118 112M40 112C80 112 80 46 118 46" fill="none" stroke="#4fb0ff" stroke-width="8" stroke-dasharray="2 14"/>
+    <circle cx="32" cy="46" r="20" fill="#ffd43b"/><circle cx="32" cy="112" r="20" fill="#ffd43b"/>
+    <path d="M24 40h6l8-7v26l-8-7h-6zM24 106h6l8-7v26l-8-7h-6z" fill="#2b3a55" stroke-width="2"/>
+    <rect x="104" y="26" width="42" height="42" rx="11" fill="#fff"/><rect x="104" y="92" width="42" height="42" rx="11" fill="#fff"/>
+    <circle cx="125" cy="47" r="11" fill="#ff8fc0"/><path d="M114 122l11-16 11 16z" fill="#9b6bff"/></g></symbol>
+  <symbol id="g-order" viewBox="0 0 160 160"><g stroke="#2b3a55" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M14 30h14l18-15v52L28 52H14z" fill="#ffd43b"/><path d="M56 30a14 14 0 0 1 0 22M64 22a26 26 0 0 1 0 38" fill="none"/>
+    <rect x="12" y="84" width="40" height="40" rx="10" fill="#4fb0ff"/><rect x="60" y="84" width="40" height="40" rx="10" fill="#ff9f43"/><rect x="108" y="84" width="40" height="40" rx="10" fill="#ff8fc0"/>
+    <circle cx="32" cy="104" r="5" fill="#2b3a55" stroke-width="0"/><circle cx="73" cy="104" r="5" fill="#2b3a55" stroke-width="0"/><circle cx="87" cy="104" r="5" fill="#2b3a55" stroke-width="0"/>
+    <circle cx="116" cy="104" r="5" fill="#2b3a55" stroke-width="0"/><circle cx="128" cy="104" r="5" fill="#2b3a55" stroke-width="0"/><circle cx="140" cy="104" r="5" fill="#2b3a55" stroke-width="0"/>
+    <path d="M22 142h112m-14-11 14 11-14 11" fill="none" stroke="#5ccf6a" stroke-width="7"/></g></symbol>
+  <symbol id="g-memory" viewBox="0 0 160 160"><g stroke="#2b3a55" stroke-width="6" stroke-linejoin="round">
+    <rect x="18" y="30" width="62" height="86" rx="14" fill="#4fb0ff" transform="rotate(-10 49 73)"/>
+    <path d="M24 0l6 13 14 1.5-10.5 9.5 3 14L24 31l-12.5 7 3-14L4 14.5 18 13z" fill="#ffd43b" stroke-width="3" transform="rotate(-10 49 73) translate(29 52)"/>
+    <rect x="80" y="40" width="62" height="86" rx="14" fill="#fff" transform="rotate(8 111 83)"/>
+    <path d="M111 104c-22-14-24-26-16-32 6-4 13-1 16 5 3-6 10-9 16-5 8 6 6 18-16 32z" fill="#ff5a5f" transform="rotate(8 111 83)"/></g></symbol>
+  <symbol id="i-plus" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="#fff" stroke="#2b3a55" stroke-width="4"/><path d="M24 14v20M14 24h20" stroke="#2b3a55" stroke-width="6" stroke-linecap="round"/></symbol>
+  <symbol id="i-check" viewBox="0 0 48 48"><path d="M10 25l9 9 19-20"/></symbol>
+  <symbol id="g-review" viewBox="0 0 160 160"><g stroke="#2b3a55" stroke-width="6" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="20" y="36" width="70" height="92" rx="14" fill="#c9a8ff" transform="rotate(-10 55 82)"/>
+    <rect x="46" y="26" width="70" height="92" rx="14" fill="#fff"/>
+    <path d="M24 4l6 13 14 1.5-10.5 9.5 3 14L24 35l-12.5 7 3-14L4 18.5 18 17z" fill="#ffd43b" stroke-width="4" transform="translate(57 46)"/>
+    <circle cx="116" cy="118" r="30" fill="#5ccf6a"/>
+    <path d="M128 112a13 13 0 1 0-1 13M130 100v12h-12" fill="none" stroke="#fff" stroke-width="7"/></g></symbol>
+  <symbol id="i-gear" viewBox="0 0 48 48"><path d="M38.3 19.6 L43.7 20.6 L43.7 27.4 L38.3 28.4 L37.3 31.0 L40.3 35.5 L35.5 40.3 L31.0 37.3 L28.4 38.3 L27.4 43.7 L20.6 43.7 L19.6 38.3 L17.0 37.3 L12.5 40.3 L7.7 35.5 L10.7 31.0 L9.7 28.4 L4.3 27.4 L4.3 20.6 L9.7 19.6 L10.7 17.0 L7.7 12.5 L12.5 7.7 L17.0 10.7 L19.6 9.7 L20.6 4.3 L27.4 4.3 L28.4 9.7 L31.0 10.7 L35.5 7.7 L40.3 12.5 L37.3 17.0Z"/><circle cx="24" cy="24" r="6"/></symbol>
+  <symbol id="i-star" viewBox="0 0 48 48"><path d="M24 4l6 13 14 1.5-10.5 9.5 3 14L24 35l-12.5 7 3-14L4 18.5 18 17z"/></symbol>
+</svg>
+
+<main id="app">
+  <section id="home" class="screen" aria-labelledby="homeTitle">
+    <button class="jar-box jar-btn home-jar" type="button" aria-label="星星罐 Star jar"></button>
+    <div class="home-art" aria-hidden="true">
+      <img src="images/words/rabbit.svg" alt="">
+      <img src="images/words/lion.svg" alt="">
+      <img src="images/words/pumpkin.svg" alt="">
+    </div>
+    <h1 id="homeTitle"><span class="zh">看圖學英文</span><span class="en" lang="en">Picture Words</span></h1>
+    <!-- Two learning areas; games remain inside the word area. -->
+    <div class="home-menu">
+      <button id="startBtn" class="btn btn-sun btn-wide" type="button" disabled aria-label="單字 Words">
+        <svg class="ic"><use href="#i-cards"/></svg><span>單字 <b>Words</b></span>
+      </button>
+      <button id="phrasesBtn" class="btn btn-sky btn-wide" type="button" disabled aria-label="生活句子 Phrases">
+        <svg class="ic"><use href="#i-speaker"/></svg><span>生活句子 <b>Phrases</b></span>
+      </button>
+
+    </div>
+    <p id="loadMsg" class="hint" role="status">準備中… Loading…</p>
+    <!-- Parent corner: hold 2 s, then a sum only a grown-up can do (js/parent.js). -->
+    <button id="parentDoor" class="parent-door" type="button" aria-label="家長專區（長按 2 秒）"><svg class="ic" aria-hidden="true"><use href="#i-gear"/></svg></button>
+  </section>
+
+  <section id="parent" class="screen parent" hidden aria-labelledby="parentTitle">
+    <header class="bar">
+      <button class="btn btn-icon" type="button" data-go="home" aria-label="回首頁"><svg class="ic"><use href="#i-home"/></svg></button>
+      <h2 id="parentTitle">家長專區</h2><span class="bar-gap" aria-hidden="true"></span>
+    </header>
+    <div class="parent-body">
+      <p class="pnote">這裡加的單字和句子只存在這台裝置，會自動出現在單字卡、三個小遊戲、今日複習和生活句子裡，學習進度照常記錄。英文由裝置朗讀；中文只顯示文字，不會念出來。</p>
+      <section class="psec" aria-labelledby="myWordsTitle">
+        <h3 id="myWordsTitle">我加的單字</h3>
+        <button id="addWordBtn" class="pbtn pbtn-main" type="button">＋ 新增單字</button>
+        <ul id="myWords" class="plist"></ul>
+      </section>
+      <section class="psec" aria-labelledby="myPhrasesTitle">
+        <h3 id="myPhrasesTitle">我加的句子</h3>
+        <button id="addPhraseBtn" class="pbtn pbtn-main" type="button">＋ 新增句子</button>
+        <ul id="myPhrases" class="plist"></ul>
+      </section>
+      <section class="psec" aria-labelledby="backupTitle">
+        <h3 id="backupTitle">備份</h3>
+        <p class="pnote">匯出成一個 JSON 檔（圖片也包在裡面），可以存到「檔案」或傳給助理正式加進遊戲；在別台裝置匯入就能用。匯入時同一筆會更新，已經有的英文會略過。</p>
+        <div class="pactions">
+          <button id="exportBtn" class="pbtn" type="button">匯出備份檔</button>
+          <label class="pbtn" for="importFile">匯入備份檔</label>
+          <input id="importFile" class="sr-only" type="file" accept=".json,application/json">
+        </div>
+        <p id="ioMsg" class="pmsg" role="status"></p>
+      </section>
+      <section class="psec" aria-labelledby="resetTitle">
+        <h3 id="resetTitle">學習進度</h3>
+        <p class="pnote">清除這台裝置上所有單字和句子的學習紀錄、主題星星和星星罐。自己加的單字和句子會留著。</p>
+        <button id="clearProgressBtn" class="pbtn pbtn-warn" type="button">清除學習進度</button>
+      </section>
+    </div>
+  </section>
+
+  <section id="parentEdit" class="screen parent" hidden aria-labelledby="editTitle">
+    <header class="bar">
+      <button class="btn btn-icon" type="button" data-go="parent" aria-label="回家長專區"><svg class="ic"><use href="#i-back"/></svg></button>
+      <h2 id="editTitle">新增單字</h2><span class="bar-gap" aria-hidden="true"></span>
+    </header>
+    <form id="editForm" class="parent-body pform" novalidate>
+      <div class="pfield">
+        <label for="fEn" id="fEnLabel">英文</label>
+        <div class="prow-inline">
+          <input id="fEn" type="text" lang="en" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="40" required>
+          <button id="fSay" class="pbtn" type="button">聽英文</button>
+        </div>
+      </div>
+      <div class="pfield">
+        <label for="fZh" id="fZhLabel">中文</label>
+        <input id="fZh" type="text" autocomplete="off" maxlength="20" required>
+      </div>
+      <div id="fThemeRow" class="pfield">
+        <label for="fTheme">主題</label>
+        <select id="fTheme"></select>
+        <div id="fNewTheme" class="pnew" hidden>
+          <label for="fThemeZh">新主題的中文名稱</label>
+          <input id="fThemeZh" type="text" autocomplete="off" maxlength="8">
+          <label for="fThemeEn">新主題的英文名稱（可不填；有填的話，小朋友選主題時會念出來）</label>
+          <input id="fThemeEn" type="text" lang="en" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20">
+        </div>
+      </div>
+      <fieldset class="pfield">
+        <legend id="fImgLegend">圖片</legend>
+        <div class="pimg"><img id="fImg" alt="選好的圖片" hidden><span id="fImgNone">還沒有圖片</span></div>
+        <div class="pactions">
+          <label class="pbtn" for="fFile">拍照或選照片</label>
+          <input id="fFile" class="sr-only" type="file" accept="image/*">
+          <button id="fGalleryBtn" class="pbtn" type="button" aria-expanded="false" aria-controls="fGallery">從內建圖片選</button>
+        </div>
+        <div id="fGallery" class="pgallery" hidden></div>
+      </fieldset>
+      <p id="fMsg" class="pmsg pmsg-bad" role="alert"></p>
+      <div class="pactions">
+        <button id="fSave" class="pbtn pbtn-main" type="submit">儲存</button>
+        <button class="pbtn" type="button" data-go="parent">取消</button>
+      </div>
+    </form>
+  </section>
+
+  <section id="phrases" class="screen" hidden aria-label="生活句子">
+    <header class="bar">
+      <button class="btn btn-icon" type="button" data-go="home" aria-label="回首頁"><svg class="ic"><use href="#i-home"/></svg></button>
+      <h2>生活句子</h2><span class="bar-gap"></span>
+    </header>
+    <div id="phraseMenu" class="game-grid"></div>
+  </section>
+  <section id="themes" class="screen" hidden aria-labelledby="themesTitle">
+    <header class="bar">
+      <button class="btn btn-icon" type="button" data-go="home" aria-label="回首頁 Home"><svg class="ic"><use href="#i-home"/></svg></button>
+      <h2 id="themesTitle">選主題 <span class="en">Pick one</span></h2>
+      <button class="jar-box jar-btn" type="button" aria-label="星星罐 Star jar"></button>
+    </header>
+    <button id="gamesBtn" class="btn btn-sky btn-wide" type="button" disabled aria-label="玩遊戲 Games">
+        <svg class="ic"><use href="#i-games"/></svg><span>玩遊戲 <b>Games</b></span>
+      </button>
+    <div id="themeGrid" class="theme-grid"></div>
+  </section>
+
+  <section id="cards" class="screen" hidden aria-label="單字卡 Word cards">
+    <header class="bar">
+      <button class="btn btn-icon" type="button" data-go="themes" aria-label="回主題 Themes"><svg class="ic"><use href="#i-back"/></svg></button>
+      <span id="progress" class="pill" aria-live="polite">1 / 1</span>
+      <span class="toggles">
+        <button id="enBtn" class="btn btn-icon btn-text" type="button" aria-pressed="true" aria-label="顯示英文字 Show English" lang="en">Aa</button>
+        <button id="zhBtn" class="btn btn-icon btn-text" type="button" aria-pressed="false" aria-label="顯示中文 Show Chinese">中</button>
+      </span>
+    </header>
+    <div id="stage" class="stage">
+      <button id="pic" class="pic" type="button" aria-label="聽發音 Listen">
+        <img id="picImg" alt="" draggable="false">
+      </button>
+    </div>
+    <div class="words">
+      <p id="wordEn" class="word-en aux-en" lang="en"></p>
+      <p id="wordZh" class="word-zh"></p>
+    </div>
+    <nav class="controls" aria-label="換卡 Change card">
+      <button id="prevBtn" class="btn btn-icon btn-nav" type="button" aria-label="上一張 Back"><svg class="ic"><use href="#i-prev"/></svg></button>
+      <button id="sayBtn" class="btn btn-sun btn-say" type="button" aria-label="聽發音 Listen"><svg class="ic"><use href="#i-speaker"/></svg></button>
+      <button id="nextBtn" class="btn btn-icon btn-nav" type="button" aria-label="下一張 Next"><svg class="ic"><use id="nextIcon" href="#i-next"/></svg></button>
+    </nav>
+  </section>
+
+  <section id="games" class="screen" hidden aria-labelledby="gamesTitle">
+    <header class="bar">
+      <button class="btn btn-icon" type="button" data-go="home" aria-label="回首頁 Home"><svg class="ic"><use href="#i-home"/></svg></button>
+      <h2 id="gamesTitle">小遊戲 <span class="en aux-en">Games</span></h2>
+      <span class="bar-gap" aria-hidden="true"></span>
+    </header>
+    <div id="themeChips" class="chips" role="radiogroup" aria-label="選主題 Theme"></div>
+    <div id="gameGrid" class="game-grid"></div>
+  </section>
+
+  <section id="play" class="screen" hidden aria-label="遊戲 Game">
+    <header class="bar">
+      <button class="btn btn-icon" type="button" data-go="games" aria-label="回遊戲選單 Games"><svg class="ic"><use href="#i-grid"/></svg></button>
+      <span id="dots" class="dots" aria-hidden="true"></span>
+      <button id="replayBtn" class="btn btn-icon btn-sun" type="button" aria-label="再聽一次 Listen again"><svg class="ic"><use href="#i-speaker"/></svg></button>
+    </header>
+    <div id="playStage" class="play-stage"></div>
+  </section>
+
+  <section id="result" class="screen" hidden aria-label="結果 Result">
+    <img id="resultFriend" class="result-friend" alt="" draggable="false">
+    <div class="result-row">
+      <div id="resultStars" class="result-stars" role="img" aria-live="polite"></div>
+      <div class="jar-box result-jar" role="img" aria-label="星星罐 Star jar"></div>
+    </div>
+    <div class="result-actions">
+      <button id="againBtn" class="btn btn-sun btn-nav" type="button" aria-label="再玩一次 Play again"><svg class="ic"><use href="#i-again"/></svg></button>
+      <button class="btn btn-nav" type="button" data-go="games" aria-label="回遊戲選單 Games"><svg class="ic"><use href="#i-grid"/></svg></button>
+      <button class="btn btn-nav" type="button" data-go="home" aria-label="回首頁 Home"><svg class="ic"><use href="#i-home"/></svg></button>
+    </div>
+  </section>
+</main>
+<div id="jarPop" class="jar-pop" hidden><div class="jar-box" role="img" aria-label="星星罐 Star jar"></div></div>
+<div id="toast" class="toast" role="status" hidden></div>
+<div id="gate" class="gate" hidden>
+  <form id="gateForm" class="gate-box" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+    <h2 id="gateTitle">家長專區</h2>
+    <label for="gateAnswer">請家長算一算：<span id="gateQ"></span> = ?</label>
+    <input id="gateAnswer" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="3">
+    <p id="gateMsg" class="pmsg pmsg-bad" role="alert"></p>
+    <div class="pactions">
+      <button class="pbtn pbtn-main" type="submit">進入</button>
+      <button id="gateCancel" class="pbtn" type="button">取消</button>
+    </div>
+  </form>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/speech.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/quiz.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/custom.js"></script>
+<script src="js/jar.js"></script>
+<script src="js/games/shell.js"></script>
+<script src="js/games/listen.js"></script>
+<script src="js/games/match.js"></script>
+<script src="js/games/memory.js"></script>
+<script src="js/phrases.js"></script>
+<script src="js/phrase-ui.js"></script>
+<script src="js/parent.js"></script>
+<script src="js/app.js"></script>
+<script src="js/pwa.js"></script>
+</body>
+</html>

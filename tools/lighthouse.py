@@ -74,18 +74,12 @@ def axe_screens(base, axe_js):
                 page.click("#play [data-go]")
             page.evaluate("() => Games.cardsDone([])"); check("result")
             page.click("#result [data-go=home]")
-            page.click("#phrasesBtn", force=True); check("phrase menu")
-            for mode in ("cards", "listen", "order"):
+            page.click("#phrasesBtn", force=True); check("phrase area")
+            page.click('#phraseGrid .theme-card[data-theme="phrases"]'); check("phrase cards")
+            page.click("#cards .bar [data-go]"); page.click("#phraseGamesBtn", force=True); check("phrase games")
+            for mode in ("listen", "order"):
                 page.click(f'[data-phrase-mode="{mode}"]'); check(f"phrase {mode}")
                 page.click("#play [data-go]")
-            # Parent corner (phase 6): hold the gear 2 s, answer the sum.
-            page.click("#phrases [data-go=home]")
-            box = page.locator("#parentDoor").bounding_box()
-            page.mouse.move(box["x"] + 20, box["y"] + 20); page.mouse.down(); page.wait_for_timeout(2300); page.mouse.up()
-            check("parent gate")
-            a, b = map(int, page.inner_text("#gateQ").split(" + "))
-            page.fill("#gateAnswer", str(a + b)); page.click("#gateForm [type=submit]"); check("parent page")
-            page.click("#addWordBtn"); page.click("#fGalleryBtn"); check("parent add form")
             ctx.close()
         browser.close()
     return found == 0, lines

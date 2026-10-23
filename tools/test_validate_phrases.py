@@ -15,4 +15,8 @@ class Cases(unittest.TestCase):
    for svg in ('broken', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 300"/>'):
     (root/'bad.svg').write_text(svg)
     with self.subTest(svg=svg):self.assertTrue(v.validate([source],root))
+ def test_missing_voice_line(self):
+  source=json.loads((v.ROOT/'data/phrases.json').read_text())
+  rows=copy.deepcopy(source);rows[0]['id']='phrase_no_voice'
+  self.assertTrue(any('missing zh.phrase_no_voice' in e for e in v.validate(rows)))
 if __name__=='__main__':unittest.main()

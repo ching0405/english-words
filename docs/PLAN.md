@@ -11,7 +11,7 @@
 - **只在本機 commit。** 不得建立 GitHub repo、不得 git push、不得開 PR、不得部署。Tim 在聊天中說「推送」才由助理處理。
 - 每完成一個主要項目就 commit（分支 `claude/phase-N-<slug>`，由 `main` 開出；階段被 Tim 接受後由助理合併回本機 main）。
 - 不修改、不參考 `~/repos/dressup`。
-- 單字資料唯一來源：`data/words.json`。新增單字＝照 `ADDING_WORDS.md`，最後必須通過 `tools/validate-words`。
+- 單字資料唯一來源：`data/words.json`。新增單字＝照 `docs/ADD_CONTENT.md`，最後必須通過 `tools/validate-words`。
 - 發音：瀏覽器內建 `speechSynthesis`（en-US）。每個單字可選填 `audio` 欄位（預錄檔），有就優先播放檔案，沒有才用 TTS。iOS Safari：必須在使用者點擊內觸發、等待 `voiceschanged`、選 en-US 聲音、失敗時有可見提示。
 - 自測：每階段 Claude 用無頭瀏覽器（Playwright＋`/usr/bin/google-chrome`）在手機尺寸 390×844 與橫向 844×390（加 iPad 820×1180 一張）實際操作並截圖，存 `qa/phase-N/`，檢查無 console error、無 404、無破圖、文字不溢出。
 - **主要裝置是 iPad（Tim 2026-10-22）**：版面以 iPad 直向 820×1180 與橫向 1180×820 為主要設計與驗收尺寸（另測 1024×1366 大尺寸 iPad），手機 390×844 只需不破版。觸控目標要大、適合小手。
@@ -23,7 +23,7 @@
 - `data/words.json`（id、english、chinese、image、theme、可選 audio）＋ `data/themes.json`（主題 id、中英名稱、圖示、顏色）。
 - 約 20 個入門單字，3–4 個主題（例：animals、fruits、colors、（toys 或 food））。每字一張可愛插畫，風格由 Claude 自行設計（全專案一致、幼兒一眼認得），寫進 `STYLE_GUIDE.md` 供之後新增單字照做。
 - 首頁（「點一下開始」解鎖語音）→ 主題選擇 → 卡片模式：大圖、點圖或喇叭聽發音、顯示英文（＋中文切換）、左右滑／按鈕換卡。
-- `ADDING_WORDS.md`（新增單字流程、圖片規格、命名）＋ `tools/validate-words`（每筆欄位齊全、id／英文不重複、圖片檔存在且尺寸符合、主題存在、audio 檔若有填則存在）。
+- `ADDING_WORDS.md`（第 8 階段併入 `docs/ADD_CONTENT.md`；新增單字流程、圖片規格、命名）＋ `tools/validate-words`（每筆欄位齊全、id／英文不重複、圖片檔存在且尺寸符合、主題存在、audio 檔若有填則存在）。
 - `README.md`、`HANDOFF.md`（結構與維護方式）。
 - 驗收：validate 通過；手機三種尺寸截圖；每張卡片都有圖；點擊能觸發 speak（Playwright 中攔截 speechSynthesis.speak 驗證被呼叫、文字正確、lang=en-US）；無 console error／404。
 
@@ -48,18 +48,18 @@
 ## 階段 4：生活簡易句子（Tim 2026-10-22 最終清單）
 - 獨立生活句子區，首頁與「單字」分為兩個大圖示入口；單字遊戲保留於單字區。
 - 只含 Tim 指定七句：Thank you.（謝謝）、Goodbye.（再見）、What is your name?（你叫什麼名字？）、I am ready.（我準備好了）、Hello.（你好）、Sorry.（對不起）、Please.（請）。不得自行加句子。
-- `data/phrases.json`：永久 phrase_ id、英文、中文、情境分類、512×512 SVG 情境圖、可選英文錄音。新增方式見 `ADDING_PHRASES.md`；有資料驗證與錯誤案例測試。
+- `data/phrases.json`：永久 phrase_ id、英文、中文、情境分類、512×512 SVG 情境圖、可選英文錄音。新增方式見 `docs/ADD_CONTENT.md`；有資料驗證與錯誤案例測試。
 - 三種玩法：句子卡（整句朗讀、逐字提示與圖片動作）、聽句子選情境圖（最多四張）、排句子（會說話的圖形字卡＋形狀顏色鷹架，不需讀字）。每輪七句各一次；沿用遊戲殼回饋與星星罐。
 - 英文 en-US、句子速度 0.72、錄音優先；中文全部預錄，音檔失敗不可走中文 TTS。
 - 句子進度用 phrase_ id 沿用 v3 儲存格式，句子區設獨立今日複習入口。
 - 驗收：資料／出題／排序／進度／複習單元測試、既有測試及完整 selftest 連兩次 0 失敗。三種 iPad 尺寸與手機直橫向完整回合（含錯誤），截圖 `qa/phase-4/` 並人工檢視。完成報告後停止，不開始階段 5。
 
 ## 階段 5：擴充單字＋美化＋PWA
-- 單字擴充到 60–80 個、6–8 個主題（例：交通工具、身體、家裡物品、天氣、數字）。每批新增照 `ADDING_WORDS.md`。
+- 單字擴充到 60–80 個、6–8 個主題（例：交通工具、身體、家裡物品、天氣、數字）。每批新增照 `docs/ADD_CONTENT.md`。
 - 動畫、轉場、音效打磨；大字、高對比；可加到主畫面（manifest、icons、service worker 離線快取，更新時版本號會刷新快取）。
 - 驗收：validate 通過；全部單字卡圖片目視總覽圖（contact sheet）；離線重新載入測試；Lighthouse PWA／a11y 檢查。
 
-## 階段 6：家長新增單字／句子頁（裝置本機）
+## 階段 6：家長新增單字／句子頁（裝置本機；第 8 階段依 Tim 決定移除）
 - 家長入口（簡單防誤觸，例如長按或算術題）；輸入英文、中文、選主題、拍照／選圖或用內建圖庫；存在該裝置的 localStorage／IndexedDB，與內建清單合併。
 - 匯出／匯入 JSON，方便之後交給助理正式加入 `data/words.json`。
 - 驗收：新增、編輯、刪除、匯出、匯入流程自動化測試；內建單字不受影響。

@@ -2,6 +2,7 @@
 // actions (Web Animations), shared by word cards and games.
 //
 //   Fx.unlock()           call inside the first tap (iOS starts audio muted)
+//   Fx.context()          the shared AudioContext (background music uses it too)
 //   Fx.sound(name)        tap, boing, whoosh, sparkle, oops, flip, star,
 //                         pop (button press), ding1–ding3 (result stars, rising)
 //   Fx.move(el, name)     wiggle, swing, sway (word pictures), shake, cheer
@@ -22,6 +23,10 @@
 
   function audio() {
     if (!ctx) {
+      // Tim (phase 8): the mute switch does not silence the game. With the
+      // 'playback' session (iPadOS 16.4+) effects and music sound like the
+      // recorded voice always did; older iPads keep their old behaviour.
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* not supported */ }
       var AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       try { ctx = new AC(); } catch (e) { return null; }
@@ -34,7 +39,8 @@
         bus = limit;
       } catch (e) { /* plain output */ }
     }
-    if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
+    // iOS: 'interrupted' after a call, Siri or the app going to the background.
+    if ((ctx.state === 'suspended' || ctx.state === 'interrupted') && ctx.resume) ctx.resume();
     return ctx;
   }
 
@@ -158,5 +164,5 @@
     }
   }
 
-  window.Fx = { unlock: unlock, sound: sound, move: move, actFor: actFor, tap: tap, burst: burst, moves: Object.keys(MOVES), sounds: Object.keys(SOUNDS) };
+  window.Fx = { unlock: unlock, context: audio, sound: sound, move: move, actFor: actFor, tap: tap, burst: burst, moves: Object.keys(MOVES), sounds: Object.keys(SOUNDS) };
 })();

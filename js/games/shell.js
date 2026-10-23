@@ -43,7 +43,7 @@
   function build(words, themes) {
     state.words = words;
     state.themes = themes.filter(function (t) { return Data.wordsInTheme(words, t.id).length; });
-    // The chosen theme may have been deleted on the parent page.
+    // The chosen theme may no longer exist.
     if (state.themeId && !state.themes.some(function (t) { return t.id === state.themeId; })) state.themeId = null;
     var chips = $('#themeChips');
     chips.textContent = '';
@@ -59,10 +59,7 @@
       b.addEventListener('click', function () {
         state.themeId = t.id;
         markChips();
-        // A parent's own theme has no recorded Chinese name: say its English
-        // name if it has one (Chinese is never read by TTS).
-        if (t.custom) { if (t.english) Speech.play({ english: t.english }); else Speech.stop(); }
-        else Speech.zh(t.id ? 'theme.' + t.id : 'games.all');
+        Speech.zh(t.id ? 'theme.' + t.id : 'games.all');
       });
       chips.appendChild(b);
     });
@@ -107,7 +104,7 @@
     document.querySelectorAll('#play .bar [data-go], #result [data-go]:not([data-go="home"])').forEach(function (b) {
       b.dataset.go = screen;
       var use = b.querySelector('use');
-      if (use) use.setAttribute('href', screen === 'games' ? '#i-grid' : '#i-back');
+      if (use) use.setAttribute('href', screen === 'games' || screen === 'phraseGames' ? '#i-grid' : '#i-back');
     });
   }
 

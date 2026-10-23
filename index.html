@@ -58,7 +58,8 @@
     <path d="M24 4l6 13 14 1.5-10.5 9.5 3 14L24 35l-12.5 7 3-14L4 18.5 18 17z" fill="#ffd43b" stroke-width="4" transform="translate(57 46)"/>
     <circle cx="116" cy="118" r="30" fill="#5ccf6a"/>
     <path d="M128 112a13 13 0 1 0-1 13M130 100v12h-12" fill="none" stroke="#fff" stroke-width="7"/></g></symbol>
-  <symbol id="i-gear" viewBox="0 0 48 48"><path d="M38.3 19.6 L43.7 20.6 L43.7 27.4 L38.3 28.4 L37.3 31.0 L40.3 35.5 L35.5 40.3 L31.0 37.3 L28.4 38.3 L27.4 43.7 L20.6 43.7 L19.6 38.3 L17.0 37.3 L12.5 40.3 L7.7 35.5 L10.7 31.0 L9.7 28.4 L4.3 27.4 L4.3 20.6 L9.7 19.6 L10.7 17.0 L7.7 12.5 L12.5 7.7 L17.0 10.7 L19.6 9.7 L20.6 4.3 L27.4 4.3 L28.4 9.7 L31.0 10.7 L35.5 7.7 L40.3 12.5 L37.3 17.0Z"/><circle cx="24" cy="24" r="6"/></symbol>
+  <symbol id="i-music" viewBox="0 0 48 48"><path d="M19 34V10l20-4v24"/><circle cx="14" cy="34" r="5" fill="currentColor"/><circle cx="34" cy="30" r="5" fill="currentColor"/></symbol>
+  <symbol id="i-music-off" viewBox="0 0 48 48"><path d="M19 34V10l20-4v24"/><circle cx="14" cy="34" r="5" fill="currentColor"/><circle cx="34" cy="30" r="5" fill="currentColor"/><path d="M7 7l34 34" stroke-width="5"/></symbol>
   <symbol id="i-star" viewBox="0 0 48 48"><path d="M24 4l6 13 14 1.5-10.5 9.5 3 14L24 35l-12.5 7 3-14L4 18.5 18 17z"/></symbol>
 </svg>
 
@@ -82,94 +83,27 @@
 
     </div>
     <p id="loadMsg" class="hint" role="status">準備中… Loading…</p>
-    <!-- Parent corner: hold 2 s, then a sum only a grown-up can do (js/parent.js). -->
-    <button id="parentDoor" class="parent-door" type="button" aria-label="家長專區（長按 2 秒）"><svg class="ic" aria-hidden="true"><use href="#i-gear"/></svg></button>
+    <!-- Background music on/off (js/music.js): a picture only, the music itself is the feedback. -->
+    <button id="musicBtn" class="btn btn-icon music-btn" type="button" aria-pressed="true" aria-label="背景音樂 Music"><svg class="ic" aria-hidden="true"><use href="#i-music"/></svg></button>
   </section>
 
-  <section id="parent" class="screen parent" hidden aria-labelledby="parentTitle">
+  <!-- Phrases, laid out like the word area: games button on top, then today's review and the phrase cards. -->
+  <section id="phrases" class="screen" hidden aria-labelledby="phrasesTitle">
     <header class="bar">
-      <button class="btn btn-icon" type="button" data-go="home" aria-label="回首頁"><svg class="ic"><use href="#i-home"/></svg></button>
-      <h2 id="parentTitle">家長專區</h2><span class="bar-gap" aria-hidden="true"></span>
+      <button class="btn btn-icon" type="button" data-go="home" aria-label="回首頁 Home"><svg class="ic"><use href="#i-home"/></svg></button>
+      <h2 id="phrasesTitle">生活句子 <span class="en aux-en">Phrases</span></h2>
+      <button class="jar-box jar-btn" type="button" aria-label="星星罐 Star jar"></button>
     </header>
-    <div class="parent-body">
-      <p class="pnote">這裡加的單字和句子只存在這台裝置，會自動出現在單字卡、三個小遊戲、今日複習和生活句子裡，學習進度照常記錄。英文由裝置朗讀；中文只顯示文字，不會念出來。</p>
-      <section class="psec" aria-labelledby="myWordsTitle">
-        <h3 id="myWordsTitle">我加的單字</h3>
-        <button id="addWordBtn" class="pbtn pbtn-main" type="button">＋ 新增單字</button>
-        <ul id="myWords" class="plist"></ul>
-      </section>
-      <section class="psec" aria-labelledby="myPhrasesTitle">
-        <h3 id="myPhrasesTitle">我加的句子</h3>
-        <button id="addPhraseBtn" class="pbtn pbtn-main" type="button">＋ 新增句子</button>
-        <ul id="myPhrases" class="plist"></ul>
-      </section>
-      <section class="psec" aria-labelledby="backupTitle">
-        <h3 id="backupTitle">備份</h3>
-        <p class="pnote">匯出成一個 JSON 檔（圖片也包在裡面），可以存到「檔案」或傳給助理正式加進遊戲；在別台裝置匯入就能用。匯入時同一筆會更新，已經有的英文會略過。</p>
-        <div class="pactions">
-          <button id="exportBtn" class="pbtn" type="button">匯出備份檔</button>
-          <label class="pbtn" for="importFile">匯入備份檔</label>
-          <input id="importFile" class="sr-only" type="file" accept=".json,application/json">
-        </div>
-        <p id="ioMsg" class="pmsg" role="status"></p>
-      </section>
-      <section class="psec" aria-labelledby="resetTitle">
-        <h3 id="resetTitle">學習進度</h3>
-        <p class="pnote">清除這台裝置上所有單字和句子的學習紀錄、主題星星和星星罐。自己加的單字和句子會留著。</p>
-        <button id="clearProgressBtn" class="pbtn pbtn-warn" type="button">清除學習進度</button>
-      </section>
-    </div>
+    <button id="phraseGamesBtn" class="btn btn-sky btn-wide" type="button" aria-label="玩遊戲 Games">
+      <svg class="ic"><use href="#i-games"/></svg><span>玩遊戲 <b>Games</b></span>
+    </button>
+    <div id="phraseGrid" class="theme-grid"></div>
   </section>
-
-  <section id="parentEdit" class="screen parent" hidden aria-labelledby="editTitle">
+  <section id="phraseGames" class="screen" hidden aria-labelledby="phraseGamesTitle">
     <header class="bar">
-      <button class="btn btn-icon" type="button" data-go="parent" aria-label="回家長專區"><svg class="ic"><use href="#i-back"/></svg></button>
-      <h2 id="editTitle">新增單字</h2><span class="bar-gap" aria-hidden="true"></span>
-    </header>
-    <form id="editForm" class="parent-body pform" novalidate>
-      <div class="pfield">
-        <label for="fEn" id="fEnLabel">英文</label>
-        <div class="prow-inline">
-          <input id="fEn" type="text" lang="en" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="40" required>
-          <button id="fSay" class="pbtn" type="button">聽英文</button>
-        </div>
-      </div>
-      <div class="pfield">
-        <label for="fZh" id="fZhLabel">中文</label>
-        <input id="fZh" type="text" autocomplete="off" maxlength="20" required>
-      </div>
-      <div id="fThemeRow" class="pfield">
-        <label for="fTheme">主題</label>
-        <select id="fTheme"></select>
-        <div id="fNewTheme" class="pnew" hidden>
-          <label for="fThemeZh">新主題的中文名稱</label>
-          <input id="fThemeZh" type="text" autocomplete="off" maxlength="8">
-          <label for="fThemeEn">新主題的英文名稱（可不填；有填的話，小朋友選主題時會念出來）</label>
-          <input id="fThemeEn" type="text" lang="en" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="20">
-        </div>
-      </div>
-      <fieldset class="pfield">
-        <legend id="fImgLegend">圖片</legend>
-        <div class="pimg"><img id="fImg" alt="選好的圖片" hidden><span id="fImgNone">還沒有圖片</span></div>
-        <div class="pactions">
-          <label class="pbtn" for="fFile">拍照或選照片</label>
-          <input id="fFile" class="sr-only" type="file" accept="image/*">
-          <button id="fGalleryBtn" class="pbtn" type="button" aria-expanded="false" aria-controls="fGallery">從內建圖片選</button>
-        </div>
-        <div id="fGallery" class="pgallery" hidden></div>
-      </fieldset>
-      <p id="fMsg" class="pmsg pmsg-bad" role="alert"></p>
-      <div class="pactions">
-        <button id="fSave" class="pbtn pbtn-main" type="submit">儲存</button>
-        <button class="pbtn" type="button" data-go="parent">取消</button>
-      </div>
-    </form>
-  </section>
-
-  <section id="phrases" class="screen" hidden aria-label="生活句子">
-    <header class="bar">
-      <button class="btn btn-icon" type="button" data-go="home" aria-label="回首頁"><svg class="ic"><use href="#i-home"/></svg></button>
-      <h2>生活句子</h2><span class="bar-gap"></span>
+      <button class="btn btn-icon" type="button" data-go="home" aria-label="回首頁 Home"><svg class="ic"><use href="#i-home"/></svg></button>
+      <h2 id="phraseGamesTitle">句子遊戲 <span class="en aux-en">Games</span></h2>
+      <span class="bar-gap" aria-hidden="true"></span>
     </header>
     <div id="phraseMenu" class="game-grid"></div>
   </section>
@@ -244,25 +178,13 @@
 </main>
 <div id="jarPop" class="jar-pop" hidden><div class="jar-box" role="img" aria-label="星星罐 Star jar"></div></div>
 <div id="toast" class="toast" role="status" hidden></div>
-<div id="gate" class="gate" hidden>
-  <form id="gateForm" class="gate-box" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
-    <h2 id="gateTitle">家長專區</h2>
-    <label for="gateAnswer">請家長算一算：<span id="gateQ"></span> = ?</label>
-    <input id="gateAnswer" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="3">
-    <p id="gateMsg" class="pmsg pmsg-bad" role="alert"></p>
-    <div class="pactions">
-      <button class="pbtn pbtn-main" type="submit">進入</button>
-      <button id="gateCancel" class="pbtn" type="button">取消</button>
-    </div>
-  </form>
-</div>
 
 <script src="js/data.js"></script>
 <script src="js/speech.js"></script>
 <script src="js/fx.js"></script>
+<script src="js/music.js"></script>
 <script src="js/quiz.js"></script>
 <script src="js/progress.js"></script>
-<script src="js/custom.js"></script>
 <script src="js/jar.js"></script>
 <script src="js/games/shell.js"></script>
 <script src="js/games/listen.js"></script>
@@ -270,7 +192,6 @@
 <script src="js/games/memory.js"></script>
 <script src="js/phrases.js"></script>
 <script src="js/phrase-ui.js"></script>
-<script src="js/parent.js"></script>
 <script src="js/app.js"></script>
 <script src="js/pwa.js"></script>
 </body>

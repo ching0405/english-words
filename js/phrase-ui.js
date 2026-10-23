@@ -1,4 +1,5 @@
-// Independent phrase area; feedback, cancellation and stars belong to Games.
+// Phrase games (listen, order) and phrase review; feedback, cancellation and
+// stars belong to Games. Browsing the phrases is the #cards deck (js/app.js).
 (function () {
   'use strict';
   var phrases = [];
@@ -34,7 +35,6 @@
           // True while the prompt (and, first time, the how-to before it) plays:
           // order tokens then only wiggle, so a tap never cuts the sentence off.
           var busy = false;
-          var nextButton = null;
           api.setQ(q);
           api.stage.textContent = '';
           api.record(phrase, 'seen');
@@ -76,14 +76,11 @@
                 });
               },
               onend: function () {
-                if (nextButton) nextButton.disabled = false;
                 if (image) image.classList.remove('phrase-speaking');
                 light(-1);
                 listening(false);
               }
             });
-            // Parent turned Chinese on: the recorded meaning follows the sentence.
-            if (mode === 'cards' && zhOn() && !phrase.custom) api.zh('zh.' + phrase.id, { queue: true });
           }
           api.onReplay(function () { if (!locked) speak(false); });
 
@@ -96,8 +93,7 @@
             var next = function () {
               if (api.alive()) api.right(element, function () { q++; ask(); });
             };
-            // A parent's own phrase has no recording: its Chinese is only shown.
-            if (zhOn() && !phrase.custom) {
+            if (zhOn()) {
               api.word(phrase);
               api.zh('zh.' + phrase.id, { queue: true, onend: next });
             } else {
@@ -131,20 +127,7 @@
             var scene = api.picture(phrase, 'scene');
             api.stage.append(scene, english, chinese);
             scene.onclick = function () { if (!locked) speak(false); };
-            if (mode === 'cards') {
-              nextButton = api.el('button', 'btn btn-icon phrase-next', { 'aria-label': '下一張' });
-              nextButton.appendChild(api.icon('#i-next'));
-              nextButton.disabled = true;
-              api.stage.appendChild(nextButton);
-              nextButton.onclick = function () {
-                if (locked) return;
-                locked = true;
-                api.dot(q);
-                api.right(scene, function () { q++; ask(); });
-              };
-            } else {
-              orderBoard(scene);
-            }
+            orderBoard(scene);
           }
 
           // Order: every token looks alike apart from a colour dealt at random,
@@ -232,32 +215,31 @@
     };
   }
 
+  // Today's review: due phrases first, then missed ones; back to the phrase area.
+  function review() {
+    var set = Progress.reviewSet(phrases, phrases.length);
+    var targets = PhraseQuiz.reviewList(set, Progress.get, REVIEW_SIZE);
+    Games.open(definition('review', targets), { back: 'phrases', targets: targets });
+  }
+
   function menu() {
     var grid = document.querySelector('#phraseMenu');
     grid.textContent = '';
     [
-      ['cards', '句子卡', '#i-cards'],
       ['listen', '聽句子找圖', '#g-listen'],
-      ['order', '排句子', '#g-order'],
-      ['review', '今日複習', '#g-review']
+      ['order', '排句子', '#g-order']
     ].forEach(function (row) {
       var button = document.createElement('button');
       button.className = 'game-card';
       button.dataset.phraseMode = row[0];
-      button.style.setProperty('--theme', ['#c4e8ff', '#ffe8a3', '#e0d0ff', '#c8efbe'][grid.children.length]);
-      button.innerHTML = '<svg class="game-pic' + (row[2] === '#i-cards' ? ' ic' : '') + '"><use href="' + row[2] + '"/></svg><span class="game-zh">' + row[1] + '</span>';
+      button.style.setProperty('--theme', ['#ffe8a3', '#e0d0ff'][grid.children.length]);
+      button.innerHTML = '<svg class="game-pic"><use href="' + row[2] + '"/></svg><span class="game-zh">' + row[1] + '</span>';
       button.onclick = function () {
-        if (row[0] === 'review') {
-          var set = Progress.reviewSet(phrases, phrases.length);
-          var targets = PhraseQuiz.reviewList(set, Progress.get, REVIEW_SIZE);
-          Games.open(definition('review', targets), { back: 'phrases', targets: targets });
-        } else {
-          var only = row[0] === 'order' ? PhraseQuiz.orderable(phrases) : null;
-          Games.open(definition(row[0], only), { back: 'phrases', targets: only });
-        }
+        var only = row[0] === 'order' ? PhraseQuiz.orderable(phrases) : null;
+        Games.open(definition(row[0], only), { back: 'phraseGames', targets: only });
       };
       grid.appendChild(button);
     });
   }
-  window.Phrases = { build: function (list) { phrases = list; }, menu: menu };
+  window.Phrases = { build: function (list) { phrases = list; }, menu: menu, review: review };
 })();

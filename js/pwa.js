@@ -23,7 +23,7 @@
     sw.register('sw.js', { updateViaCache: 'none' }).then(function (reg) {
       // An app left open on the iPad checks for a new version when it comes back.
       document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'visible') reg.update().catch(function () { /* offline */ });
+        if (reg && document.visibilityState === 'visible') reg.update().catch(function () { /* offline */ });
       });
     }).catch(function () { /* no offline play; the game still works online */ });
   });

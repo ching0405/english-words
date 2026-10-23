@@ -49,7 +49,7 @@
 - `clipped()`：把條紋、斑點裁在某個形狀裡面
 
 新增一個字：在檔案裡加一個同名函式（例如 `def panda():`），加進 `DRAWINGS`，執行
-`python3 tools/art/draw_words.py panda`，然後看圖修正（見 `ADDING_WORDS.md`）。
+`python3 tools/art/draw_words.py panda`，然後看圖修正（見 `docs/ADD_CONTENT.md`）。
 
 ## 二、介面（UI）
 

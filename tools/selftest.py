@@ -18,15 +18,11 @@ iPad (main device) and phone sizes and checks:
   - offline (phase 5): the service worker caches every game file; with the
     server stopped the app reloads and plays (pictures, recorded mp3s, Range
     requests); a new version refreshes the cache and reloads only on the home screen
-  - parent corner (phase 6): gate, add / edit / delete words and phrases (photos
-    and built-in pictures), they join cards, games, review and phrase games,
-    export / import (broken files too), kept after reload; built-in words,
-    phrases and their progress untouched; Chinese only shown, never spoken
 Screenshots go to /tmp/ew-selftest-qa/phase-N/ so a normal run leaves the
 committed qa/ pictures alone; pass --qa (acceptance runs only) to write them to
 qa/phase-1/ (cards), qa/phase-2/ (games), qa/phase-3/ (progress), qa/phase-4/ (phrases).
 
-Usage: python3 tools/selftest.py [--only cards|games|progress|phrases|pwa|look|parent] [--qa] [--chrome /usr/bin/google-chrome]
+Usage: python3 tools/selftest.py [--only cards|games|progress|phrases|pwa|look|a11y|music] [--qa] [--chrome /usr/bin/google-chrome]
 Exit code 1 when any check fails.
 """
 import argparse, contextlib, importlib.util, io, json, pathlib, re, shutil, socket, subprocess, sys, tempfile, time, wave
@@ -35,12 +31,12 @@ from playwright.sync_api import sync_playwright
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TMP_QA = pathlib.Path("/tmp/ew-selftest-qa")
-QA = QA2 = QA3 = QA4 = QA5 = QA6 = QA7 = None  # set by use_qa_root() in main()
+QA = QA2 = QA3 = QA4 = QA5 = QA6 = QA7 = QA8 = None  # set by use_qa_root() in main()
 
 
 def use_qa_root(root):
-    global QA, QA2, QA3, QA4, QA5, QA6, QA7
-    QA, QA2, QA3, QA4, QA5, QA6, QA7 = (root / f"phase-{n}" for n in (1, 2, 3, 4, 5, 6, 7))
+    global QA, QA2, QA3, QA4, QA5, QA6, QA7, QA8
+    QA, QA2, QA3, QA4, QA5, QA6, QA7, QA8 = (root / f"phase-{n}" for n in (1, 2, 3, 4, 5, 6, 7, 8))
 
 # iPad is the main device (every theme, big buttons); phones only must not break.
 # The offline worker is blocked here so ctx.route() (short test clips, broken
@@ -1204,21 +1200,143 @@ def progress_flow(run, browser, base, name, opts, words):
 
 # Phase 4: solve from spoken sentences and shape hints, with all helper text off.
 
+# Saved on a device by the phase 6/7 site (parent corner): progress with the
+# parent's own words, their list and a photo. Phase 8 removed the parent corner.
+LEGACY_SEED = """() => new Promise(done => {
+  const day = 86400000, now = Date.now(), r = (box) => ({seen: 3, right: 2, wrong: 1, last: now - 2 * day, box, due: now - day});
+  localStorage.setItem('ew.progress', JSON.stringify({version: 3,
+    words: {goat: r(2), phrase_hello: r(1), my_word_cat: r(1), my_phrase_good_night: r(0)},
+    best: {animals: 1, my_theme_pets: 2}, jar: {stars: 7, full: 1}, reviewTurn: 0}));
+  localStorage.setItem('ew.custom.v1', JSON.stringify({version: 1,
+    themes: [{id: 'my_theme_pets', english: 'Pets', chinese: '寵物', color: '#ffd6a5'}],
+    words: [{id: 'my_word_cat', english: 'cat', chinese: '貓', theme: 'my_theme_pets', image: 'idb'}],
+    phrases: [{id: 'my_phrase_good_night', english: 'Good night.', chinese: '晚安', category: 'custom', image: 'images/phrases/hello.svg'}]}));
+  localStorage.setItem('ew.settings.v1', JSON.stringify({showEnglish: false, showChinese: true}));
+  const open = indexedDB.open('picture-words', 1);
+  open.onupgradeneeded = () => open.result.createObjectStore('photos');
+  open.onsuccess = () => { const tx = open.result.transaction('photos', 'readwrite');
+    tx.objectStore('photos').put('data:image/jpeg;base64,AAAA', 'my_word_cat');
+    tx.oncomplete = () => { open.result.close(); done(true); }; };
+})"""
+LEGACY_READ = """() => new Promise(done => {
+  const open = indexedDB.open('picture-words');
+  open.onsuccess = () => { const db = open.result;
+    if (!db.objectStoreNames.contains('photos')) { db.close(); done(null); return; }
+    const get = db.transaction('photos').objectStore('photos').get('my_word_cat');
+    get.onsuccess = () => { db.close(); done(get.result || null); }; };
+})"""
+
+
+def legacy_case(run, browser, base, name, opts):
+    """An iPad that used the parent corner updates to phase 8: nothing breaks,
+    built-in progress, jar and settings stay, the parent's data is left alone."""
+    errors = []
+    ctx, page = open_site(browser, base, opts, {"lateMs": 0, "event": True}, errors)
+    tag = f"[{name}/legacy]"
+    page.evaluate(LEGACY_SEED)
+    custom_before = page.evaluate("() => localStorage.getItem('ew.custom.v1')")
+    page.reload()
+    page.wait_for_selector("#startBtn:not([disabled])")
+    goat = page.evaluate("() => Progress.get('goat')")
+    run.check(goat and goat["box"] == 2 and goat["seen"] == 3 and goat["right"] == 2, f"{tag} built-in word progress kept {goat}")
+    run.check(page.evaluate("() => Progress.get('phrase_hello').box") == 1, f"{tag} built-in phrase progress kept")
+    jar = page.evaluate("() => JSON.parse(localStorage.getItem('ew.progress')).jar")
+    run.check(jar == {"stars": 7, "full": 1}, f"{tag} star jar kept {jar}")
+    run.check(page.evaluate("() => document.body.classList.contains('hide-en') && document.body.classList.contains('show-zh')"), f"{tag} Aa / 中 settings kept")
+    page.click("#startBtn", force=True)
+    page.wait_for_selector("#themes:not([hidden])")
+    themes = page.evaluate("() => [...document.querySelectorAll('#themeGrid .theme-card')].map(b => b.dataset.theme)")
+    run.check(themes == ["review", "animals", "halloween"], f"{tag} only built-in themes {themes}")
+    due = page.evaluate("() => [...document.querySelectorAll('.review-card .due-pics img')].map(i => i.dataset.word)")
+    run.check(due == ["goat"], f"{tag} review shows only built-in due words {due}")
+    page.click('.theme-card[data-theme="animals"]')
+    page.wait_for_selector("#cards:not([hidden])")
+    animals = sum(w["theme"] == "animals" for w in json.loads((ROOT / "data/words.json").read_text()))
+    run.check(page.evaluate("() => document.querySelector('#progress').textContent") == f"1 / {animals}", f"{tag} animal cards: the {animals} built-in words")
+    saved = page.evaluate("() => JSON.parse(localStorage.getItem('ew.progress')).words")
+    run.check("my_word_cat" in saved and "my_phrase_good_night" in saved, f"{tag} old records of the parent's words are not deleted")
+    run.check(page.evaluate("() => localStorage.getItem('ew.custom.v1')") == custom_before, f"{tag} ew.custom.v1 untouched")
+    run.check(page.evaluate(LEGACY_READ) == "data:image/jpeg;base64,AAAA", f"{tag} IndexedDB photo untouched")
+    run.check(not errors, f"{tag} no errors {errors}")
+    ctx.close()
+
+
+def phrase_deck(run, page, name, phrases):
+    """Phrase cards (phase 8): the #cards screen, like word cards. Every phrase in
+    data order, slow en-US, arrows and the end of the deck give a jar star."""
+    tag = f"[{name}/phrase cards]"
+    jar0 = page.evaluate("() => Progress.snapshot().jar")
+    since = calls(page)
+    page.click('#phraseGrid .theme-card[data-theme="phrases"]')
+    page.wait_for_selector("#cards:not([hidden])")
+    run.check(page.evaluate("() => document.querySelector('#cards').classList.contains('phrase-deck')"), f"{tag} phrases open in the card screen")
+    run.check(page.get_attribute("#cards .bar [data-go]", "data-go") == "phrases", f"{tag} back button leads to the phrase area")
+    run.check(page.locator("#enBtn").is_visible() and page.locator("#zhBtn").is_visible(), f"{tag} Aa / 中 switches are there")
+    n = len(phrases)
+    for i, p in enumerate(phrases):
+        page.wait_for_function("(t) => window.__speech.calls.some(c => c.text === t)", arg=p["english"])
+        said = [c for c in page.evaluate("(n) => window.__speech.calls.slice(n)", since) if c["text"] == p["english"]][-1]
+        run.check(said["rate"] == .72 and said["lang"] == "en-US", f"{tag} card {i + 1}: '{p['english']}' read slowly in en-US")
+        run.check(page.inner_text("#progress") == f"{i + 1} / {n}", f"{tag} card {i + 1}: counter {page.inner_text('#progress')}")
+        if i == 0:
+            layout = page.evaluate(LAYOUT_CHECK, MIN_TAP["ipad" if name.startswith("ipad") else "phone"])
+            run.check(not layout, f"{tag} layout {layout}")
+            shot(page, name + "-phrase-card", QA4)
+            # Back and forth with the arrows.
+            page.click("#nextBtn")
+            page.wait_for_function("(t) => document.querySelector('#progress').textContent === t", arg=f"2 / {n}")
+            page.click("#prevBtn")
+            page.wait_for_function("(t) => document.querySelector('#progress').textContent === t", arg=f"1 / {n}")
+            run.check(page.evaluate("() => window.__speech.calls.at(-1).text") == p["english"], f"{tag} back arrow reads the first phrase again")
+        since = calls(page)
+        page.click("#nextBtn")
+    page.wait_for_function("(t) => document.querySelector('#progress').textContent === t", arg=f"1 / {n}")
+    page.wait_for_timeout(1200)
+    jar = page.evaluate("() => Progress.snapshot().jar")
+    run.check(jar["full"] * 12 + jar["stars"] == jar0["full"] * 12 + jar0["stars"] + 1, f"{tag} whole deck seen: one star in the jar {jar0} -> {jar}")
+    run.check(zh_said(page, 0, "cards.done"), f"{tag} whole deck seen: recorded praise")
+    page.click("#cards .bar [data-go]")
+    page.wait_for_selector("#phrases:not([hidden])")
+    stars = page.get_attribute('#phraseGrid .theme-card[data-theme="phrases"] .theme-stars', "data-stars")
+    run.check(stars == "1", f"{tag} the phrase card shows one star after a look-through ({stars})")
+
+
 def phrases_flow(run, browser, base, name, opts):
     errors=[]
     ctx,page=open_site(browser,base,{**opts,"reduced_motion":"reduce"},{"lateMs":0,"event":True},errors)
     page.evaluate("() => { document.body.classList.add('hide-en'); document.body.classList.remove('show-zh'); }")
     page.wait_for_selector('#phrasesBtn:not([disabled])')
     page.click('#phrasesBtn',force=True)
-    run.check(page.locator('#phraseMenu button').count()==4,f'[{name}] phrase modes plus independent review')
+    page.wait_for_selector('#phrases:not([hidden])')
+    page.wait_for_timeout(300)
+    # Laid out like the word area: games button, then review and the phrase cards.
+    cards=page.evaluate("() => [...document.querySelectorAll('#phraseGrid > button')].map(b => b.dataset.theme)")
+    run.check(cards==['review','phrases'] and page.locator('#phraseGamesBtn').is_visible(),f'[{name}] phrase area: games button, review and phrase cards {cards}')
+    run.check(page.locator('#phrases p').count()==0,f'[{name}] phrase area: no written instructions')
+    run.check(zh_said(page,0,'phrases.home'),f'[{name}] phrase area: recorded how-to')
+    layout=page.evaluate(LAYOUT_CHECK, MIN_TAP['ipad' if name.startswith('ipad') else 'phone'])
+    run.check(not layout,f'[{name}] phrase area layout {layout}')
     shot(page,name+'-menu',QA4)
     phrases=json.loads((ROOT/'data/phrases.json').read_text())
+    phrase_deck(run,page,name,phrases)
+    page.click('#phraseGamesBtn',force=True)
+    page.wait_for_selector('#phraseGames:not([hidden])')
+    modes=page.evaluate("() => [...document.querySelectorAll('#phraseMenu button')].map(b => b.dataset.phraseMode)")
+    run.check(modes==['listen','order'],f'[{name}] phrase games: listen and order {modes}')
+    run.check(zh_said(page,0,'games.pick'),f'[{name}] phrase games: recorded how-to')
+    shot(page,name+'-games',QA4)
     lookup={p['english']:p for p in phrases}
     multi=[p for p in phrases if len(p['english'].split())>1]
-    rounds={'cards':len(phrases),'listen':len(phrases),'order':len(multi),'review':4}
+    rounds={'listen':len(phrases),'order':len(multi),'review':4}
     missed=[]
-    for mode in ('cards','listen','order','review'):
-        page.click('[data-phrase-mode="'+mode+'"]')
+    for mode in ('listen','order','review'):
+        if mode=='review':
+            # Today's review sits in the phrase area, like the word review card.
+            page.click('#phraseGames [data-go="home"]')
+            page.click('#phrasesBtn',force=True)
+            page.click('#phraseGrid .review-card')
+        else:
+            page.click('[data-phrase-mode="'+mode+'"]')
         asked=[]
         order_wrong=False
         busy_tap=None
@@ -1258,11 +1376,6 @@ def phrases_flow(run, browser, base, name, opts):
                     run.check(not zh_said(page,since,'game.try_again') and 'is-wrong' in bad.get_attribute('class'),f'[{name}] listen: a wrong picture is greyed out and not repeated')
                     shot(page,name+'-'+mode+'-wrong',QA4)
                 page.locator('#playStage .pick[data-word="'+p['id']+'"]').click()
-            elif mode=='cards':
-                page.click('#playStage .scene')
-                page.wait_for_timeout(180)
-                if q==0:shot(page,name+'-cards',QA4)
-                page.click('.phrase-next')
             else:
                 tokens=[t.rstrip('?.!') for t in p['english'].split()]
                 run.check(len(tokens)>1,f'[{name}] order only uses multi-word phrases')
@@ -1315,11 +1428,14 @@ def phrases_flow(run, browser, base, name, opts):
             run.check(set(asked[:len(set(missed))])==set(missed),f'[{name}] review asks missed phrases first {asked} {missed}')
         run.check(len(set(asked))==rounds[mode],f'[{name}] {mode} every phrase once per round')
         shot(page,name+'-'+mode+'-result',QA4)
-        page.click('#result [data-go="phrases"]')
+        if mode!='review':
+            # Back to the phrase games menu (grid icon), not the word games.
+            page.click('#result [data-go="phraseGames"]')
+            page.wait_for_selector('#phraseGames:not([hidden])')
     snapshot=page.evaluate('() => Progress.snapshot()')
     run.check(all(snapshot['words'].get(p['id'],{}).get('seen',0)>0 for p in phrases),f'[{name}] phrase progress saved separately')
     run.check(any(r.get('wrong',0) for id,r in snapshot['words'].items() if id.startswith('phrase_')),f'[{name}] wrong phrases recorded')
-    run.check(snapshot['jar']['full']*12+snapshot['jar']['stars']==12,f'[{name}] every phrase round adds three stars to the shared jar')
+    run.check(snapshot['jar']['full']*12+snapshot['jar']['stars']==10,f'[{name}] three game rounds give three stars each and the card deck one, in the shared jar')
     page.reload()
     page.wait_for_selector('#phrasesBtn:not([disabled])')
     run.check(page.evaluate('() => Progress.snapshot()')==snapshot,f'[{name}] phrase records and stars persist after reload')
@@ -1359,12 +1475,12 @@ def phrase_voice_cases(run, browser, base):
     # The UI uses these boundary callbacks to highlight the displayed word.
     page.evaluate("""() => {
       window.__lit=[];
-      new MutationObserver(() => document.querySelectorAll('.phrase-text span.lit').forEach(s=>window.__lit.push(s.textContent))).observe(document.querySelector('#playStage'),{subtree:true,attributes:true,attributeFilter:['class']});
+      new MutationObserver(() => document.querySelectorAll('#wordEn span.lit').forEach(s=>window.__lit.push(s.textContent))).observe(document.querySelector('#wordEn'),{subtree:true,attributes:true,attributeFilter:['class']});
     }""")
-    page.click('[data-phrase-mode="cards"]')
-    page.wait_for_timeout(500)
     page.evaluate("() => document.body.classList.remove('hide-en')")
-    page.click('.scene')
+    page.click('#phraseGrid .theme-card[data-theme="phrases"]')
+    page.wait_for_timeout(500)
+    page.click('#pic')
     page.wait_for_timeout(180)
     run.check(bool(page.evaluate('() => window.__lit.length')),'[phrases voice] visible word highlight during card playback')
     shot(page,'ipad-phrase-text',QA4)
@@ -1385,23 +1501,38 @@ def phrase_voice_cases(run, browser, base):
     ctx,page=open_site(browser,base,VIEWPORTS['ipad-portrait'],{'lateMs':0,'event':True},errors)
     page.evaluate("() => { window.__order=[]; const o=Speech.play, z=Speech.zh; Speech.play=(i,p)=>{window.__order.push('en:'+i.english);return o(i,p);}; Speech.zh=(k,p)=>{window.__order.push('zh:'+k);return z(k,p);}; }")
     page.click('#phrasesBtn',force=True)
-    page.click('[data-phrase-mode="cards"]')
-    page.wait_for_function("() => document.querySelector('#play').dataset.q==='0'")
-    page.wait_for_function("() => !document.querySelector('#playStage').dataset.listening")
-    page.evaluate("() => document.body.classList.add('show-zh')")  # what the parent 中 switch sets
+    page.click('#phraseGrid .theme-card[data-theme="phrases"]')
+    page.wait_for_selector('#cards:not([hidden])')
+    page.click('#zhBtn')  # the 中 switch on the card screen
+    page.wait_for_timeout(300)
     since=audios(page)
-    page.click('#playStage .scene')
-    pid=page.locator('#playStage .scene').get_attribute('data-word')
+    page.click('#pic')
+    pid=json.loads((ROOT/'data/phrases.json').read_text())[0]['id']
     page.wait_for_timeout(800)
     order=page.evaluate('() => window.__order')
     run.check(order[-2:]==['en:'+[p for p in json.loads((ROOT/'data/phrases.json').read_text()) if p['id']==pid][0]['english'],'zh:zh.'+pid] and zh_said(page,since,'zh.'+pid),f'[phrases voice] Chinese on: recorded meaning after the English sentence {order[-3:]}')
     run.check(not zh_tts(page) and not errors,f'[phrases voice] Chinese meaning is an mp3, no errors {errors}')
     ctx.close()
+    # A line added to voice-zh.json but not recorded yet: skipped in silence, never TTS.
+    errors=[]
+    ctx,page=open_site(browser,base,VIEWPORTS['ipad-portrait'],{'lateMs':0,'event':True},errors)
+    page.wait_for_load_state('networkidle')  # audio/zh/manifest.json is read; set our own list after it
+    page.evaluate("() => Speech.setRecorded(['cards.howto'])")
+    before=(audios(page),calls(page))
+    res=page.evaluate("""() => new Promise(done => { let ended=false;
+      const r=Speech.zh('phrases.not_recorded_yet',{onend:()=>{ended=true;}});
+      Speech.play({english:'goat'},{queue:true,onend:()=>done({r,ended})}); })""")
+    page.wait_for_timeout(300)
+    run.check(res=={'r':False,'ended':True},f'[phrases voice] an unrecorded line is skipped and its onend still runs {res}')
+    run.check(audios(page)==before[0] and not zh_tts(page),'[phrases voice] an unrecorded line fetches no mp3 and uses no TTS')
+    run.check(page.evaluate("() => window.__speech.calls.at(-1).text")=='goat','[phrases voice] what was queued after it still plays')
+    run.check(page.is_hidden('#toast') and not errors,f'[phrases voice] no error message for an unrecorded line {errors}')
+    ctx.close()
     # Short how-to lines (real recordings) so the first English comes quickly.
     errors=[]
     ctx,page=open_site(browser,base,VIEWPORTS['ipad-portrait'],{'lateMs':0,'event':True},errors,real_voice=True)
     lengths=page.evaluate("""async () => { const ac=new (window.AudioContext||window.webkitAudioContext)(); const out={};
-      for (const k of ['phrases.pick','phrases.cards','phrases.listen','phrases.order','phrases.review','phrases.review_done']) {
+      for (const k of ['phrases.cards','phrases.listen','phrases.order','phrases.review','phrases.review_done']) {
         const b=await (await fetch('audio/zh/'+k+'.mp3')).arrayBuffer(); out[k]=(await ac.decodeAudioData(b)).duration; }
       return out; }""")
     run.check(all(v<=4.0 for v in lengths.values()),f'[phrases voice] every phrase how-to line is 4 s or shorter {lengths}')
@@ -1495,7 +1626,16 @@ def look_flow(run, browser, base, name, opts):
     page.click("#phrasesBtn", force=True)
     page.wait_for_selector("#phrases:not([hidden])")
     page.wait_for_timeout(500)
-    contrast("phrase menu"); shot5("phrases")
+    contrast("phrase area"); lay("phrase area"); shot5("phrases")
+    page.click('#phraseGrid .theme-card[data-theme="phrases"]')
+    page.wait_for_selector("#cards:not([hidden])")
+    page.wait_for_timeout(500)
+    contrast("phrase card"); lay("phrase card"); shot5("phrase-card")
+    page.click("#cards .bar [data-go]")
+    page.click("#phraseGamesBtn", force=True)
+    page.wait_for_selector("#phraseGames:not([hidden])")
+    page.wait_for_timeout(500)
+    contrast("phrase games"); lay("phrase games"); shot5("phrase-games")
     # Order: English helper on (default), the sentence stays hidden until built.
     page.click('[data-phrase-mode="order"]')
     page.wait_for_function("() => document.querySelector('#play').dataset.q === '0'")
@@ -1534,7 +1674,7 @@ FOCUS_INFO = """() => {
   const cs = getComputedStyle(el), img = el.querySelector('img[alt]');
   const name = (el.getAttribute('aria-label') || (el.labels && el.labels[0] && el.labels[0].innerText) || el.innerText
     || el.getAttribute('title') || (img && img.alt) || '').trim();
-  const where = el.closest('.screen, #gate');
+  const where = el.closest('.screen');
   window.__focusKeys = window.__focusKeys || new WeakMap();
   if (!window.__focusKeys.has(el)) window.__focusKeys.set(el, window.__focusKeys.size || Math.random());
   return {key: String(window.__focusKeys.get(el)), id: el.id || String(el.className || el.tagName), name,
@@ -1623,20 +1763,20 @@ def a11y_flow(run, browser, base, name, opts):
     axe_check(run, page, f"{tag} result after keyboard")
     go("#result [data-go=home]", "home", "result -> home")
     go("#phrasesBtn", "phrases", "home -> phrases")
-    walk("phrase menu")
-    for mode in ("cards", "listen", "order"):
-        go(f'[data-phrase-mode="{mode}"]', "play", f"phrases -> {mode}")
+    walk("phrase area")
+    axe_check(run, page, f"{tag} phrase area")
+    go('#phraseGrid .theme-card[data-theme="phrases"]', "cards", "phrases -> phrase cards")
+    walk("phrase cards")
+    axe_check(run, page, f"{tag} phrase cards")
+    go("#cards .bar [data-go]", "phrases", "phrase cards -> phrases")
+    go("#phraseGamesBtn", "phraseGames", "phrases -> phrase games")
+    walk("phrase games")
+    axe_check(run, page, f"{tag} phrase games")
+    for mode in ("listen", "order"):
+        go(f'[data-phrase-mode="{mode}"]', "play", f"phrase games -> {mode}")
         walk(f"phrase {mode}")
-        go("#play [data-go]", "phrases", f"phrase {mode} -> phrases")
-    go("#phrases [data-go=home]", "home", "phrases -> home")
-    # The gear by keyboard: the sum opens at once; Escape returns to the gear.
-    kb_go(page, "#parentDoor")
-    page.wait_for_selector("#gate:not([hidden])")
-    run.check(page.evaluate("() => document.activeElement.id") == "gateAnswer", f"{tag} keyboard gear: focus on the sum's answer")
-    page.keyboard.press("Escape")
-    page.wait_for_selector("#gate", state="hidden")
-    info = page.evaluate(FOCUS_INFO)
-    run.check(info and info["id"] == "parentDoor" and info["visible"], f"{tag} gate closed with Escape: focus back on the gear ({info and info['id']})")
+        go("#play [data-go]", "phraseGames", f"phrase {mode} -> phrase games")
+    go("#phraseGames [data-go=home]", "home", "phrase games -> home")
     run.check(not errors, f"{tag} keyboard: no errors {errors}")
     ctx.close()
 
@@ -1696,34 +1836,8 @@ def motion_case(run, browser, base, name, opts, reduce):
     page.wait_for_selector("#result:not([hidden])")
     page.wait_for_timeout(300)
     run.check(page.locator("#resultStars > *").count() > 0, f"{tag} result: the stars are still shown")
-    if reduce:
-        page.click("#result [data-go=home]")
-        page.wait_for_selector("#home:not([hidden])")
-        hold_door(page, 2300)
-        run.check(page.is_visible("#gate"), f"{tag} holding the gear 2 s still opens the sum")
     run.check(not errors, f"{tag} no errors {errors}")
     ctx.close()
-
-
-# ---------- phase 6: the parent corner (words and phrases a parent adds on the device)
-
-PHOTO_PNG = None
-
-
-def test_photo():
-    """A 900x600 photo-like PNG (wider than tall: checks the square crop)."""
-    global PHOTO_PNG
-    if PHOTO_PNG is None:
-        import struct, zlib
-        w, h = 900, 600
-        raw = bytearray()
-        for y in range(h):
-            raw.append(0)
-            for x in range(w):
-                raw += bytes((40, 40, 60) if (x - 450) ** 2 + (y - 300) ** 2 <= 150 ** 2 else (240, 120 + x * 100 // w, 40))
-        chunk = lambda t, d: struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
-        PHOTO_PNG = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(bytes(raw), 6)) + chunk(b"IEND", b"")
-    return PHOTO_PNG
 
 
 AXE = sorted(pathlib.Path.home().glob(".npm/_npx/*/node_modules/axe-core/axe.min.js"))
@@ -1741,430 +1855,98 @@ def axe_check(run, page, label):
     run.check(not res, f"{label}: axe 0 violations {res}")
 
 
-PARENT_LAYOUT = """(min) => {
-  const bad = [], vw = innerWidth;
-  const screen = [...document.querySelectorAll('.screen')].find(s => !s.hidden);
-  screen.querySelectorAll('button, .pbtn, input[type=text], select, h2, h3, p, .prow').forEach(el => {
-    const r = el.getBoundingClientRect();
-    if (!r.width) return;
-    if (r.left < -1 || r.right > vw + 1) bad.push('offscreen-x ' + (el.id || el.className || el.tagName));
-    if (el.matches('h2, h3, p, .prow') && el.scrollWidth > el.clientWidth + 1) bad.push('overflow ' + (el.id || el.className || el.tagName));
-    if (el.matches('button, .pbtn, input[type=text], select') && (r.height < min || r.width < min)) bad.push(`small ${el.id || el.className} ${Math.round(r.width)}x${Math.round(r.height)}`);
-  });
-  if (document.documentElement.scrollWidth > vw + 1) bad.push('page scrolls sideways');
-  return bad;
-}"""
+# ---------- phase 8: background music (js/music.js)
+
+def load_render_bgm():
+    spec = importlib.util.spec_from_file_location("render_bgm", ROOT / "tools/render-bgm.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
-def hold_door(page, ms):
-    box = page.locator("#parentDoor").bounding_box()
-    page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-    page.mouse.down()
-    page.wait_for_timeout(ms)
-    page.mouse.up()
+def music_level(page, duck):
+    """Integrated loudness (LUFS) of one loop at the game's gain, measured by ffmpeg."""
+    rb = load_render_bgm()
+    res = page.evaluate(rb.RENDER, duck)
+    with tempfile.TemporaryDirectory() as tmp:
+        wav = pathlib.Path(tmp) / "loop.wav"
+        rb.write_wav(wav, res["rate"], __import__("base64").b64decode(res["pcm"]), repeat=2)
+        return rb.loudness(wav)[0]
 
 
-def gate_timing_check(run, browser, base, name, opts):
-    """Test the real door handlers with browser time, independent of driver delays."""
+def music_flow(run, browser, base, name, opts):
+    """Quiet music after the first tap, ducked under every voice line, a
+    picture-only switch on the home screen that is remembered, asleep in the
+    background, the iPad mute switch does not silence it ('playback')."""
     errors = []
-    ctx, page = open_site(browser, base, opts, {"lateMs": 0, "event": True}, errors)
-    try:
-        page.clock.install()
-        page.clock.pause_at(page.evaluate("Date.now()"))
-        door = page.locator("#parentDoor")
-        box = door.bounding_box()
-        page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-        tag = f"[{name}/parent clock]"
-        for event in ("pointerup", "pointerleave", "pointercancel"):
-            page.mouse.down()
-            page.clock.run_for(900)
-            if event == "pointerup":
-                page.mouse.up()
-            else:
-                door.dispatch_event(event)
-                page.mouse.up()
-            page.clock.run_for(1500)  # past the original 2-second deadline
-            run.check(page.is_hidden("#gate"), f"{tag} {event} at 900 ms cancels the gate timer")
-        page.mouse.down()
-        page.clock.run_for(1999)
-        run.check(page.is_hidden("#gate"), f"{tag} still closed at 1999 ms")
-        page.clock.run_for(1)
-        run.check(page.is_visible("#gate"), f"{tag} opens at 2000 ms")
-        page.mouse.up()
-        run.check(not errors, f"{tag} no browser errors {errors}")
-    finally:
-        ctx.close()
-
-
-def enter_parent(page):
-    """What a parent does: hold the gear 2 s, then answer the sum."""
-    hold_door(page, 2300)
-    page.wait_for_selector("#gate:not([hidden])")
-    a, b = map(int, re.findall(r"\d+", page.inner_text("#gateQ")))
-    page.fill("#gateAnswer", str(a + b))
-    page.click("#gateForm [type=submit]")
-    page.wait_for_selector("#parent:not([hidden])")
-
-
-def go_home(page):
-    page.click(".screen:not([hidden]) [data-go=home]")
-    page.wait_for_selector("#home:not([hidden])")
-
-
-def add_item(page, kind, english, chinese, photo=None, gallery=None, theme=None, new_theme=None, shot_as=None):
-    """Fill the add form and save. Returns the message shown (empty when saved)."""
-    page.click("#addWordBtn" if kind == "word" else "#addPhraseBtn")
-    page.wait_for_selector("#parentEdit:not([hidden])")
-    page.fill("#fEn", english)
-    page.fill("#fZh", chinese)
-    if new_theme:
-        page.select_option("#fTheme", "+new")
-        page.fill("#fThemeZh", new_theme[0])
-        page.fill("#fThemeEn", new_theme[1])
-    elif theme:
-        page.select_option("#fTheme", theme)
-    if photo:
-        page.set_input_files("#fFile", files=[{"name": "photo.png", "mimeType": "image/png", "buffer": photo}])
-        page.wait_for_function("() => (document.querySelector('#fImg').getAttribute('src') || '').startsWith('data:image/jpeg')")
-    if gallery:
-        page.click("#fGalleryBtn")
-        page.click(f'.pgallery-pick[data-src="{gallery}"]')
-    if shot_as:
-        shot_as()
-    page.click("#fSave")
-    page.wait_for_function("() => !document.querySelector('#parent').hidden || document.querySelector('#fMsg').textContent")
-    return "" if page.is_visible("#parent") else page.inner_text("#fMsg")
-
-
-BUILTIN_STATE = """() => { const s = Progress.snapshot(); const words = {};
-  Object.keys(s.words).filter(k => !k.startsWith('my_')).forEach(k => words[k] = s.words[k]);
-  const best = {}; Object.keys(s.best).filter(k => !k.startsWith('my_')).forEach(k => best[k] = s.best[k]);
-  return {words, best, jar: s.jar}; }"""
-
-
-def photo_key(page, item_id):
-    """Where the list says an item's photo is kept in IndexedDB."""
-    return page.evaluate("""id => { const l = Custom.list(), w = l.words.concat(l.phrases).find(x => x.id === id);
-      return w && w.photo || id; }""", item_id)
-
-
-def photo_in_db(page, item_id, key=None):
-    """The stored photo for an id (or a photo key): [width, height, type] or None."""
-    return page.evaluate("""id => new Promise(done => { const r = indexedDB.open('picture-words', 1);
-      r.onsuccess = () => { const g = r.result.transaction('photos').objectStore('photos').get(id);
-        g.onsuccess = () => { if (!g.result) return done(null); const i = new Image();
-          i.onload = () => done([i.naturalWidth, i.naturalHeight, g.result.slice(5, 15)]); i.onerror = () => done(['bad']); i.src = g.result; };
-        g.onerror = () => done(null); }; r.onerror = () => done(null); })""", key or photo_key(page, item_id))
-
-
-# The gallery offers a word only pictures no other word shows (and a phrase
-# only pictures no other phrase shows), so parent items borrow the other kind's.
-HORSE_PICTURE = "images/phrases/ready.svg"
-
-
-def parent_flow(run, browser, base, name, opts, full):
-    """Phase 6: gate, add / edit / delete words and phrases, they show up in cards,
-    games, today's review and phrase games, export / import (broken files too),
-    kept after reload; built-in words, phrases and their progress untouched."""
-    QA6.mkdir(parents=True, exist_ok=True)
-    gate_timing_check(run, browser, base, name, opts)
-    errors = []
-    ctx, page = open_site(browser, base, opts, {"lateMs": 0, "event": True}, errors)
-    page.on("dialog", lambda d: d.accept())
-    tag = f"[{name}/parent]"
-    shot6 = lambda label: shot(page, f"{name}-{label}", QA6)
-    min_tap = MIN_TAP["ipad"] if name.startswith("ipad") else MIN_TAP["phone"]
-    lay = lambda where: run.check(not (bad := page.evaluate(LAYOUT_CHECK, min_tap)), f"{tag} layout {where} {bad}")
-    play = lambda where: run.check(not (bad := page.evaluate(PARENT_LAYOUT, 60 if name.startswith("ipad") else 44)), f"{tag} parent layout {where} {bad}")
-    builtin_words = json.loads((ROOT / "data/words.json").read_text())
-    builtin_phrases = json.loads((ROOT / "data/phrases.json").read_text())
-    # Some built-in progress first, so we can see it is never touched.
-    page.evaluate("() => { Progress.seen('goat'); Progress.answer('lion', true); Progress.answer('phrase_hello', false); Progress.addJarStars(2); }")
-    page.reload()  # theme stars catch up with that progress on load
-    page.wait_for_selector("#phrasesBtn:not([disabled])")
-    before = page.evaluate(BUILTIN_STATE)
-    BY_EN.update({w["english"]: w["id"] for w in builtin_words})
-    BY_EN.update({"cat": "my_word_cat", "horse": "my_word_horse"})
-
-    # Entrance: the Aa/中 toggles stay where they were; the gear sits on the home screen.
-    lay("home with the parent gear")
-    shot6("home-entrance")
-    run.check(page.evaluate("() => document.querySelector('#cards .toggles #enBtn') && document.querySelector('#cards .toggles #zhBtn') && !!document.querySelector('#cards .bar .toggles')"),
-              f"{tag} the Aa / 中 toggles are still in the word-card top bar")
-    page.click("#parentDoor")
-    page.wait_for_timeout(300)
-    run.check(page.is_hidden("#gate"), f"{tag} a quick tap on the gear does not open anything")
-    # The press length as the page saw it (a busy machine can stretch a 0.9 s hold).
-    page.evaluate("""() => { const d = document.querySelector('#parentDoor'); window.__press = {};
-      d.addEventListener('pointerdown', () => { window.__press.down = performance.now(); });
-      d.addEventListener('pointerup', () => { window.__press.up = performance.now(); }); }""")
-    # Retry only a driver hold that was actually delivered too late. Such a
-    # sample is inconclusive, never a pass for the short-hold assertion.
-    for attempt in range(3):
-        hold_door(page, 900)
-        held = page.evaluate("() => window.__press.up - window.__press.down")
-        page.wait_for_timeout(1300)  # cancellation must survive the deadline
-        if held < 2000:
-            break
-        print(f"note: {tag} driver hold stretched to {held:.0f} ms; retrying short hold", flush=True)
-        if page.is_visible("#gate"):
-            page.click("#gateCancel")
-    run.check(held < 2000 and page.is_hidden("#gate"), f"{tag} letting go before 2 s does not open anything (held {held:.0f} ms)")
-    box = page.locator("#parentDoor").bounding_box()
-    page.mouse.move(box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-    page.mouse.down()
-    page.wait_for_timeout(1000)
-    page.screenshot(path=str(QA6 / f"{name}-entrance-holding.png"))
-    page.wait_for_timeout(1300)
-    page.mouse.up()
-    page.wait_for_selector("#gate:not([hidden])")
-    shot6("entrance-gate")
-    a, b = map(int, re.findall(r"\d+", page.inner_text("#gateQ")))
-    run.check(a + b >= 17, f"{tag} the sum is one a small child cannot do ({a} + {b})")
-    page.fill("#gateAnswer", str(a + b + 1))
-    page.click("#gateForm [type=submit]")
-    run.check(page.is_visible("#gate") and page.is_hidden("#parent") and "不對" in page.inner_text("#gateMsg"), f"{tag} a wrong answer keeps the door shut")
-    page.click("#gateCancel")
-    run.check(page.is_hidden("#gate") and page.is_visible("#home"), f"{tag} cancel goes back to the home screen")
-    enter_parent(page)
-    page.wait_for_timeout(400)
-    play("empty list")
-    shot6("parent-empty")
-    if full:
-        axe_check(run, page, f"{tag} parent page")
-
-    # Add: a photo (new theme), a built-in picture, two phrases.
-    form_shot = lambda: (play("add form"), shot6("add-word-form"), full and axe_check(run, page, f"{tag} add form"))
-    msg = add_item(page, "word", "cat", "貓", photo=test_photo(), new_theme=("寵物", "Pets"), shot_as=form_shot)
-    run.check(msg == "", f"{tag} add a word with a photo and a new theme {msg}")
-    # One built-in picture per word (zebra's is not offered); a free one from the gallery.
-    run.check(add_item(page, "word", "horse", "馬", gallery=HORSE_PICTURE, theme="animals") == "", f"{tag} add a word with a built-in picture")
-    msg = add_item(page, "word", "Lion", "獅子", gallery="images/phrases/goodbye.svg", theme="animals")
-    run.check("已經有" in msg, f"{tag} a word that is already built in is refused gently ({msg})")
-    page.click("#parentEdit [data-go=parent]")
-    msg = add_item(page, "word", "dog", "", gallery="images/phrases/thank_you.svg", theme="animals")
-    run.check("中文" in msg, f"{tag} missing Chinese is refused gently ({msg})")
-    page.click("#parentEdit [data-go=parent]")
-    msg = add_item(page, "phrase", "Can I have some water?", "我可以喝水嗎", gallery="images/words/goat.svg")
-    run.check("最多 4" in msg, f"{tag} a phrase too long for the order game is refused gently ({msg})")
-    page.click("#parentEdit [data-go=parent]")
-    run.check(add_item(page, "phrase", "Good night.", "晚安", photo=test_photo(), shot_as=lambda: shot6("add-phrase-form")) == "", f"{tag} add a phrase with a photo")
-    run.check(add_item(page, "phrase", "I love you.", "我愛你", gallery="images/words/cow.svg") == "", f"{tag} add a phrase with a built-in picture")
-    ids = page.evaluate("() => Custom.list()")
-    run.check([w["id"] for w in ids["words"]] == ["my_word_cat", "my_word_horse"] and [p["id"] for p in ids["phrases"]] == ["my_phrase_good_night", "my_phrase_i_love_you"]
-              and [t["id"] for t in ids["themes"]] == ["my_theme_pets"], f"{tag} ids carry the my_ prefix {ids['words']}")
-    run.check(photo_in_db(page, "my_word_cat") == [512, 512, "image/jpeg"], f"{tag} the photo is cut to 512x512 JPEG and kept in IndexedDB {photo_in_db(page, 'my_word_cat')}")
-    run.check(ids["words"][0]["image"] == "idb" and len(page.evaluate("() => localStorage.getItem('ew.custom.v1')")) < 2000, f"{tag} the list in localStorage holds no picture data")
-
-    # Edit: new Chinese, same photo and id.
-    page.click('.prow[data-id="my_word_cat"] [data-act=edit]')
-    page.wait_for_selector("#parentEdit:not([hidden])")
-    run.check(page.input_value("#fEn") == "cat" and page.input_value("#fTheme") == "my_theme_pets", f"{tag} edit form opens filled in")
-    page.fill("#fZh", "小貓")
-    page.click("#fSave")
-    page.wait_for_selector("#parent:not([hidden])")
-    cat = [w for w in page.evaluate("() => Custom.list().words") if w["id"] == "my_word_cat"]
-    run.check(cat and cat[0]["chinese"] == "小貓" and cat[0]["image"] == "idb" and photo_in_db(page, "my_word_cat"), f"{tag} edit keeps id and photo {cat}")
-    page.wait_for_timeout(400)
-    play("list")
-    shot6("parent-list")
-
-    # Reload: everything is still there.
-    page.reload()
-    page.wait_for_selector("#phrasesBtn:not([disabled])")
-    enter_parent(page)
-    run.check(page.locator("#myWords .prow").count() == 2 and page.locator("#myPhrases .prow").count() == 2, f"{tag} after reloading the list is still there")
-    try:
-        page.wait_for_function("() => [...document.querySelectorAll('.prow img')].every(i => i.complete && i.naturalWidth > 0)", timeout=5000)
-        pics = True
-    except Exception:
-        pics = page.evaluate("() => [...document.querySelectorAll('.prow img')].map(i => [i.src.slice(0, 40), i.complete, i.naturalWidth])")
-    run.check(pics is True, f"{tag} after reloading the pictures still show {pics}")
-    now = page.evaluate(BUILTIN_STATE)
-    run.check(now == before, f"{tag} adding, editing and reloading leave built-in progress alone {'' if now == before else (before, now)}")
-    go_home(page)
-
-    # Word cards: the new theme with its photo; English said, Chinese only shown.
+    ctx = browser.new_context(**opts)
+    fast_voice(ctx)
+    # Chrome has no navigator.audioSession: a stand-in shows what Safari gets.
+    ctx.add_init_script("navigator.audioSession = {type: 'auto'}; window.__ctxs = 0; const AC0 = window.AudioContext;"
+                        "window.AudioContext = function (...a) { window.__ctxs++; return new AC0(...a); }; window.AudioContext.prototype = AC0.prototype;")
+    ctx.add_init_script(FAKE_SPEECH + '({"lateMs": 0, "event": true})')
+    page = ctx.new_page()
+    watch(page, errors)
+    page.goto(base)
+    page.wait_for_selector("#startBtn:not([disabled])")
+    tag = f"[{name}/music]"
+    page.wait_for_timeout(500)
+    run.check(page.evaluate("() => window.__ctxs") == 0 and not page.evaluate("() => Music.playing"), f"{tag} silent before the first tap (no audio started)")
+    btn = page.locator("#musicBtn")
+    run.check(btn.get_attribute("aria-pressed") == "true" and btn.get_attribute("aria-label") and not btn.inner_text().strip(), f"{tag} switch: on by default, a picture with a name, no text")
+    box = btn.bounding_box()
+    run.check(box["width"] >= MIN_TAP["ipad"] and box["height"] >= MIN_TAP["ipad"], f"{tag} switch is a big target {box['width']:.0f}x{box['height']:.0f}")
     page.click("#startBtn", force=True)
-    page.wait_for_selector("#themes:not([hidden])")
-    page.wait_for_timeout(500)
-    run.check(page.locator('.theme-card[data-theme="my_theme_pets"]').count() == 1, f"{tag} the new theme is on the theme screen")
-    lay("themes with a parent theme")
-    shot6("themes-custom")
-    n, a0 = calls(page), audios(page)
-    page.click('.theme-card[data-theme="my_theme_pets"]')
-    run.check(wait_word(page, n, "cat") and page.evaluate("() => document.querySelector('#picImg').naturalWidth") == 512, f"{tag} the card shows the photo and says 'cat'")
-    page.click("#zhBtn")
-    run.check(page.inner_text("#wordZh") == "小貓" and page.is_visible("#wordZh"), f"{tag} the Chinese is shown as text")
-    lay("card with a parent word")
-    shot6("card-custom")
-    page.click("#zhBtn")
-    run.check(not any("my_" in u for u in page.evaluate("() => window.__audio")[a0:]), f"{tag} no recording is asked for a parent word")
-    page.click('#cards [data-go=themes]')
-    page.click('.theme-card[data-theme="animals"]')
-    seen = []
-    for _ in range(len([w for w in builtin_words if w["theme"] == "animals"]) + 1):
-        seen.append(page.evaluate("() => document.querySelector('#picImg').getAttribute('src')"))
-        page.click("#nextBtn")
-    run.check(HORSE_PICTURE in seen and len(seen) == 9, f"{tag} a parent word in a built-in theme joins its cards")
-
-    # Games: the theme chip says the English name; every game uses the parent's words.
-    page.click('#cards [data-go=themes]')
-    page.click("#gamesBtn", force=True)
-    page.wait_for_selector("#games:not([hidden])")
-    n, a0 = calls(page), audios(page)
-    page.click('#themeChips .chip[data-theme="my_theme_pets"]')
-    run.check(wait_word(page, n, "Pets") and not zh_said(page, a0, "theme.my_"), f"{tag} the parent theme chip says its English name, no Chinese voice")
-    a0 = open_game(page, "listen")
-    target = heard_after(page, SPEECH_MARK["n"])
-    run.check(target == "my_word_cat" and page.locator('.choices .pick[data-word="my_word_cat"]').count() == 1, f"{tag} listen: the parent word is asked ({target})")
-    page.wait_for_timeout(1500)  # the star jar from the finished deck has gone
-    lay("listen with a parent word")
-    shot6("listen-custom")
-    page.click('.choices .pick[data-word="my_word_cat"]')
-    page.wait_for_function("() => Progress.get('my_word_cat') && Progress.get('my_word_cat').right === 1")
-    run.check(True, f"{tag} listen: a right answer is recorded for the parent word")
-    to_games(page, base)
-    open_game(page, "memory")
-    page.wait_for_timeout(500)
-    run.check(page.locator('.mcard[data-word="my_word_cat"]').count() == 2, f"{tag} memory: the parent word is a pair")
-    i, j = [k for k, w in enumerate(page.eval_on_selector_all(".mcard", "e => e.map(x => x.dataset.word)")) if w == "my_word_cat"]
-    page.click(f".mcard >> nth={i}")
-    page.click(f".mcard >> nth={j}")
-    page.wait_for_timeout(700)
-    shot6("memory-custom")
-    to_games(page, base)
-    open_game(page, "match")
-    page.wait_for_timeout(500)
-    run.check(page.locator('#playStage [data-word="my_word_cat"]').count() >= 1, f"{tag} match: the parent word is on the board")
-    shot6("match-custom")
-    to_games(page, base)
-    page.click('#themeChips .chip[data-theme=""]')
-
-    # Today's review: a parent word that is due comes first.
-    page.evaluate("""() => { const s = JSON.parse(localStorage.getItem('ew.progress'));
-      s.words.my_word_cat.due = 1; s.reviewTurn = 2; localStorage.setItem('ew.progress', JSON.stringify(s)); }""")
+    page.wait_for_function("() => Music.playing", timeout=5000)
+    run.check(page.evaluate("() => navigator.audioSession.type") == "playback", f"{tag} audio session 'playback': the mute switch does not silence the game")
+    # The how-to is speaking: the music waits under it, then comes up to its level.
+    page.wait_for_function("() => Math.abs(Music.gain() - Music.LEVEL) < 0.02", timeout=8000)
+    run.check(True, f"{tag} after the first tap the music comes up to its level")
+    normal, ducked = music_level(page, False), music_level(page, True)
+    run.check(abs(normal + 32) <= 1.5, f"{tag} loudness {normal:.1f} LUFS (about -32, voice is -16)")
+    run.check(abs(ducked + 44) <= 1.5, f"{tag} under a voice line {ducked:.1f} LUFS (about -44)")
+    # Ducking: Chinese how-to then an English word, sampled every 50 ms.
+    trace = page.evaluate("""() => new Promise(done => {
+      const out = [], t0 = performance.now();
+      const id = setInterval(() => out.push([Math.round(performance.now() - t0), Music.gain()]), 50);
+      Speech.zh('cards.howto');
+      Speech.play({english: 'goat'}, {queue: true, onend: () => { out.push(['end', Music.gain()]);
+        setTimeout(() => { out.push(['hold', Music.gain()]);
+          setTimeout(() => { clearInterval(id); out.push(['back', Music.gain()]); done(out); }, 1500); }, 400); }});
+    })""")
+    level, low = page.evaluate("() => Music.LEVEL"), page.evaluate("() => Music.LEVEL * Music.DUCK")
+    during = [g for t, g in trace if isinstance(t, int) and t >= 250 and t < next(i for i, (k, _) in enumerate(trace) if k == "end") * 50]
+    marks = {k: g for k, g in trace if isinstance(k, str)}
+    run.check(during and max(during) <= low * 1.15, f"{tag} while speaking (both lines) the music stays ducked (max {max(during or [0]):.3f}, ducked {low:.3f})")
+    run.check(marks["hold"] <= low * 1.15, f"{tag} 0.4 s after the last line it is still ducked ({marks['hold']:.3f})")
+    run.check(abs(marks["back"] - level) < 0.03, f"{tag} then it comes back ({marks['back']:.3f} of {level:.3f})")
+    # The switch: off fades out, remembered after reload, on again.
+    page.click("#themes [data-go=home]")
+    page.wait_for_selector("#home:not([hidden])")
+    page.click("#musicBtn")
+    page.wait_for_function("() => Music.gain() < 0.01", timeout=3000)
+    off = page.evaluate("() => [document.querySelector('#musicBtn').getAttribute('aria-pressed'), document.querySelector('#musicBtn use').getAttribute('href'), JSON.parse(localStorage.getItem('ew.settings.v1')).music]")
+    run.check(off == ["false", "#i-music-off", False], f"{tag} switch off: music fades out, crossed-out picture, saved {off}")
+    shot(page, f"{name}-music-off", QA8)
     page.reload()
     page.wait_for_selector("#startBtn:not([disabled])")
     page.click("#startBtn", force=True)
-    page.wait_for_selector('.review-card img[data-word="my_word_cat"]')
-    run.check(True, f"{tag} review card shows the due parent word")
-    shot6("review-card-custom")
-    page.click(".review-card")
-    page.wait_for_selector("#play:not([hidden])")
-    page.wait_for_timeout(500)
-    run.check(page.evaluate("() => document.querySelector('#play').dataset.mode") == "review" and page.locator('.mcard[data-word="my_word_cat"]').count() == 2,
-              f"{tag} today's review (memory) includes the parent word")
-    page.click("#play [data-go]")
-
-    # Phrases: in the listen and order games; Chinese meaning shown, never spoken.
-    go_home(page)
-    page.evaluate("() => document.body.classList.add('show-zh')")
-    page.click("#phrasesBtn", force=True)
-    page.wait_for_selector("#phrases:not([hidden])")
-    lookup = {p["english"]: p["id"] for p in builtin_phrases}
-    lookup.update({"Good night.": "my_phrase_good_night", "I love you.": "my_phrase_i_love_you"})
-    a0 = audios(page)
-    page.click('[data-phrase-mode="listen"]')
-    asked = []
-    while page.is_hidden("#result") and len(asked) < 12:
-        q = str(len(asked))
-        # The question's sentence: the first one spoken while this question is up
-        # (a right answer says the sentence again, so go by question number).
-        text = page.wait_for_function("([q, names]) => { const c = window.__speech.calls.find(c => c.lang === 'en-US' && c.q === q && c.game === 'phrase-listen' && names.includes(c.text)); return c ? c.text : false; }",
-                                      arg=[q, list(lookup)], timeout=15000).json_value()
-        pid = lookup[text]
-        asked.append(pid)
-        if pid == "my_phrase_good_night":
-            page.wait_for_timeout(300)
-            shot6("phrase-listen-custom")
-        page.click(f'.choices .pick[data-word="{pid}"]')
-        page.wait_for_function("(q) => document.querySelector('#play').dataset.q !== q || !document.querySelector('#result').hidden", arg=q, timeout=15000)
-    run.check(len(asked) == 9 and {"my_phrase_good_night", "my_phrase_i_love_you"} <= set(asked), f"{tag} phrase listen: all 9 phrases, the parent's included {asked}")
-    run.check(not zh_said(page, a0, "zh.my_"), f"{tag} the parent phrase's Chinese is never spoken")
-    run.check(page.evaluate("() => Progress.get('my_phrase_good_night') && Progress.get('my_phrase_good_night').right") == 1, f"{tag} phrase progress is recorded")
-    wait_result(page)
-    page.click("#result [data-go=phrases]")
-    page.click('[data-phrase-mode="order"]')
-    built = []
-    for _ in range(5):
-        page.wait_for_function("() => !document.querySelector('#playStage').dataset.listening && document.querySelector('#playStage .scene')", timeout=15000)
-        pid = page.locator("#playStage .scene").get_attribute("data-word")
-        q = page.evaluate("() => document.querySelector('#play').dataset.q")
-        built.append(pid)
-        english = next(k for k, v in lookup.items() if v == pid)
-        for k, want in enumerate(re.findall(r"[A-Za-z']+", english)):
-            if k == 1 and pid == "my_phrase_i_love_you":
-                shot6("phrase-order-custom")
-            bank = page.locator(".phrase-bank button:not([disabled])")
-            for j in range(bank.count()):
-                n = calls(page)
-                bank.nth(j).click()
-                page.wait_for_function("(n) => window.__speech.calls.length > n", arg=n)
-                if page.evaluate("() => window.__speech.calls.at(-1).text") == want:
-                    bank.nth(j).click()
-                    break
-        try:
-            page.wait_for_function("(q) => document.querySelector('#play').dataset.q !== q || !document.querySelector('#result').hidden", arg=q, timeout=15000)
-        except Exception:
-            raise RuntimeError(f"order stuck on {pid}: " + json.dumps(page.evaluate("() => ({q: document.querySelector('#play').dataset.q, slots: [...document.querySelectorAll('.slot')].map(s => s.className), said: window.__speech.calls.slice(-6).map(c => c.text)})")))
-    run.check({"my_phrase_good_night", "my_phrase_i_love_you"} <= set(built) and len(built) == 5, f"{tag} order: parent phrases with several words are in the order game {built}")
-    wait_result(page)
-    go_home(page)
-
-    # Export, then delete, then import (broken files first).
-    enter_parent(page)
-    with page.expect_download() as dl:
-        page.click("#exportBtn")
-    path = dl.value.path()
-    doc = json.loads(pathlib.Path(path).read_text())
-    run.check(doc["format"] == "picture-words-custom" and [w["english"] for w in doc["words"]] == ["cat", "horse"] and len(doc["phrases"]) == 2
-              and doc["words"][0]["image"].startswith("data:image/jpeg;base64,") and doc["words"][1]["image"] == HORSE_PICTURE
-              and doc["phrases"][0]["category"] == "custom" and dl.value.suggested_filename.startswith("picture-words-backup-"),
-              f"{tag} export: a JSON file like data/words.json with photos as data URLs")
-    good = pathlib.Path(path).read_text()
-    before = page.evaluate(BUILTIN_STATE)  # games above practised built-in phrases too
-    cat_key = photo_key(page, "my_word_cat")
-    page.click('.prow[data-id="my_word_cat"] [data-act=delete]')
-    page.wait_for_function("() => !document.querySelector('.prow[data-id=\"my_word_cat\"]')")
-    state = page.evaluate("() => ({rec: Progress.get('my_word_cat'), best: Progress.snapshot().best.my_theme_pets, themes: Custom.list().themes.length})")
-    run.check(state == {"rec": None, "best": None, "themes": 0}, f"{tag} delete: the word, its progress and its now-empty theme are gone {state}")
-    run.check(photo_in_db(page, "my_word_cat", cat_key) is None, f"{tag} delete: the photo is removed from IndexedDB")
-    saved = page.evaluate("() => localStorage.getItem('ew.custom.v1')")
-    broken = {
-        "not-json.json": "{ this is not json",
-        "other-app.json": json.dumps({"hello": 1}),
-        "bad-item.json": json.dumps({**doc, "words": [{**doc["words"][0], "theme": "no_such_theme"}]}),
-        "bad-picture.json": json.dumps({**doc, "words": [{**doc["words"][0], "image": "data:image/png;base64,AAAA"}]}),
-    }
-    for fname, text in broken.items():
-        page.set_input_files("#importFile", files=[{"name": fname, "mimeType": "application/json", "buffer": text.encode()}])
-        page.wait_for_function("() => document.querySelector('#ioMsg').textContent.startsWith('沒有匯入')", timeout=10000)
-        run.check(page.evaluate("() => localStorage.getItem('ew.custom.v1')") == saved and page.locator("#myWords .prow").count() == 1,
-                  f"{tag} import {fname}: gentle message, nothing changed ({page.inner_text('#ioMsg')})")
-    if full:
-        shot6("import-broken")
-    page.set_input_files("#importFile", files=[{"name": "backup.json", "mimeType": "application/json", "buffer": good.encode()}])
-    page.wait_for_function("() => document.querySelector('#ioMsg').textContent.startsWith('匯入好了')", timeout=15000)
-    msg = page.inner_text("#ioMsg")
-    run.check("新增 1" in msg and "更新 3" in msg, f"{tag} import: cat comes back, the rest is updated ({msg})")
-    run.check(photo_in_db(page, "my_word_cat") == [512, 512, "image/jpeg"] and page.locator("#myWords .prow").count() == 2, f"{tag} import: the photo is back in IndexedDB")
-    page.set_input_files("#importFile", files=[{"name": "again.json", "mimeType": "application/json", "buffer": good.replace("my_word_horse", "my_word_horse_2").encode()}])
-    page.wait_for_function("() => document.querySelector('#ioMsg').textContent.includes('略過')", timeout=15000)
-    run.check(page.locator("#myWords .prow").count() == 2, f"{tag} import: the same English under another id is skipped ({page.inner_text('#ioMsg')})")
-    page.wait_for_timeout(300)
-    shot6("parent-imported")
-
-    # Built-in words, phrases and their progress are untouched; no Chinese TTS.
-    after = page.evaluate(BUILTIN_STATE)
-    run.check(after == before, f"{tag} delete and import leave built-in progress alone")
-    counts = page.evaluate("() => Promise.all([fetch('data/words.json').then(r => r.json()), fetch('data/phrases.json').then(r => r.json())]).then(([w, p]) => [w.length, p.length])")
-    run.check(counts == [13, 7], f"{tag} data/ still has 13 words and 7 phrases {counts}")
-    if not full:
-        page.click("#clearProgressBtn")
-        page.wait_for_function("() => !Progress.get('goat')")
-        run.check(page.evaluate("() => Custom.list().words.length") == 2, f"{tag} clearing progress keeps the parent's words")
-    run.check(not zh_tts(page), f"{tag} no Chinese read by TTS {zh_tts(page)}")
+    page.wait_for_timeout(800)
+    run.check(page.evaluate("() => document.querySelector('#musicBtn').getAttribute('aria-pressed')") == "false" and page.evaluate("() => Music.gain()") < 0.01, f"{tag} still off after reload")
+    page.click("#themes [data-go=home]")
+    page.click("#musicBtn")
+    page.wait_for_function("() => Music.playing && Music.gain() > 0.1", timeout=8000)
+    run.check(page.evaluate("() => document.querySelector('#musicBtn').getAttribute('aria-pressed')") == "true", f"{tag} switch on again: music comes back")
+    shot(page, f"{name}-music-on", QA8)
+    # Background: fade out and sleep; the next tap wakes it.
+    page.evaluate("() => { Object.defineProperty(document, 'visibilityState', {value: 'hidden', configurable: true}); document.dispatchEvent(new Event('visibilitychange')); }")
+    page.wait_for_timeout(700)
+    faded = page.evaluate("() => Music.gain()")
+    run.check(faded < 0.05, f"{tag} in the background the music fades out ({faded:.3f})")
+    page.evaluate("() => { Object.defineProperty(document, 'visibilityState', {value: 'visible', configurable: true}); document.dispatchEvent(new Event('visibilitychange')); }")
+    page.click("#startBtn", force=True)
+    page.wait_for_function("() => Music.gain() > 0.05", timeout=8000)
+    run.check(True, f"{tag} back in front, the next tap brings the music back")
     run.check(not errors, f"{tag} no errors {errors}")
     ctx.close()
 
@@ -2237,6 +2019,11 @@ def pwa_flow(run, browser):
         page.click("#cards [data-go=themes]")
         page.click("#themes [data-go=home]")
         page.click("#phrasesBtn", force=True)
+        page.click('#phraseGrid .theme-card[data-theme="phrases"]')
+        page.wait_for_function("() => document.querySelector('#picImg').complete && document.querySelector('#picImg').naturalWidth > 0")
+        run.check(True, "[pwa] offline: phrase card picture shows")
+        page.click("#cards .bar [data-go]")
+        page.click("#phraseGamesBtn", force=True)
         page.click('[data-phrase-mode="listen"]')
         page.wait_for_function("() => [...document.querySelectorAll('#playStage img')].length === 4 && [...document.querySelectorAll('#playStage img')].every(i => i.complete && i.naturalWidth > 0)")
         run.check(True, "[pwa] offline: phrase pictures show in a game")
@@ -2246,13 +2033,10 @@ def pwa_flow(run, browser):
         cold.goto(base)
         cold.wait_for_selector("#startBtn:not([disabled])", timeout=15000)
         run.check(True, "[pwa] offline: opening the app fresh works")
-        # The parent corner works offline too, and a word added there shows up.
-        enter_parent(cold)
-        run.check(add_item(cold, "word", "horse", "馬", gallery=HORSE_PICTURE, theme="animals") == "", "[pwa] offline: the parent page adds a word")
-        go_home(cold)
         cold.click("#startBtn", force=True)
         cold.click('.theme-card[data-theme="animals"]')
-        run.check(cold.evaluate("() => document.querySelector('#progress').textContent") == "1 / 9", "[pwa] offline: the parent's word joins the cards")
+        animals = sum(w["theme"] == "animals" for w in json.loads((ROOT / "data/words.json").read_text()))
+        run.check(cold.evaluate("() => document.querySelector('#progress').textContent") == f"1 / {animals}", "[pwa] offline: word cards open after a cold start")
         cold.close()
         run.check(not errors, f"[pwa] offline: no errors {errors}")
 
@@ -2269,7 +2053,7 @@ def pwa_flow(run, browser):
         page.wait_for_function("v => caches.keys().then(k => !k.includes('picture-words-' + v))", arg=version, timeout=30000)
         page.wait_for_timeout(500)
         run.check(page.evaluate("() => window.__same === 1"), "[pwa] update: no reload in the middle of play")
-        page.click("#phrases [data-go=home]")
+        page.click("#phraseGames [data-go=home]")
         page.wait_for_function("() => !window.__same", timeout=15000)
         page.wait_for_selector("#startBtn:not([disabled])")
         run.check(page.evaluate("() => fetch('css/app.css').then(r => r.text()).then(t => t.includes('pwa-test-version'))"),
@@ -2289,14 +2073,14 @@ def pwa_flow(run, browser):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--chrome", default="/usr/bin/google-chrome")
-    ap.add_argument("--only", choices=("cards", "games", "progress", "phrases", "pwa", "look", "parent", "a11y"), help="run only the word cards (phase 1), games (phase 2), progress (phase 3), phrases (phase 4), offline app or look (phase 5), parent corner (phase 6), keyboard focus and reduced motion (phase 7)")
+    ap.add_argument("--only", choices=("cards", "games", "progress", "phrases", "pwa", "look", "a11y", "music"), help="run only the word cards (phase 1), games (phase 2), progress (phase 3), phrases (phase 4/8), offline app or look (phase 5), keyboard focus and reduced motion (phase 7), background music (phase 8)")
     ap.add_argument("--show-pass", action="store_true", help="also list every passed check")
     ap.add_argument("--qa", action="store_true", help="acceptance run: write screenshots to qa/ instead of /tmp/ew-selftest-qa/")
     args = ap.parse_args()
     qa_root = ROOT / "qa" if args.qa else TMP_QA
     use_qa_root(qa_root)
-    parts = [args.only] if args.only else ["cards", "games", "progress", "phrases", "pwa", "look", "parent", "a11y"]
-    for folder, part in ((QA, "cards"), (QA2, "games"), (QA3, "progress"), (QA4, "phrases"), (QA5, "look"), (QA6, "parent"), (QA7, "a11y")):
+    parts = [args.only] if args.only else ["cards", "games", "progress", "phrases", "pwa", "look", "a11y", "music"]
+    for folder, part in ((QA, "cards"), (QA2, "games"), (QA3, "progress"), (QA4, "phrases"), (QA5, "look"), (QA7, "a11y"), (QA8, "music")):
         if part in parts:
             folder.mkdir(parents=True, exist_ok=True)
             for old in folder.glob("*.png"):
@@ -2326,6 +2110,8 @@ def main():
             if "progress" in parts:
                 for name in PROGRESS_SIZES:
                     progress_flow(run, browser, base, name, VIEWPORTS[name], words)
+                for name in ("ipad-portrait", "ipad-landscape", "ipad-pro"):
+                    legacy_case(run, browser, base, name, VIEWPORTS[name])
             if "phrases" in parts:
                 phrase_sheet(browser, base)
                 phrase_voice_cases(run, browser, base)
@@ -2337,15 +2123,14 @@ def main():
                 overview_sheet(browser, base)
                 for name in ("ipad-portrait", "ipad-landscape", "ipad-pro"):
                     look_flow(run, browser, base, name, VIEWPORTS[name])
-            if "parent" in parts:
-                for name in ("ipad-portrait", "ipad-landscape", "ipad-pro", "phone-portrait"):
+            if "music" in parts:
+                for name in ("ipad-portrait", "ipad-landscape", "ipad-pro"):
                     try:
-                        parent_flow(run, browser, base, name, VIEWPORTS[name], full=name.startswith("ipad"))
+                        music_flow(run, browser, base, name, VIEWPORTS[name])
                     except Exception as e:
                         import traceback
                         print(traceback.format_exc(), flush=True)
-                        where = [f for f in traceback.extract_tb(e.__traceback__) if f.name == "parent_flow"][-1:]
-                        run.check(False, f"[{name}/parent] stopped at line {where[0].lineno if where else '?'}: {str(e).splitlines()[0]}")
+                        run.check(False, f"[{name}/music] stopped: {str(e).splitlines()[0]}")
             if "a11y" in parts:
                 cases = [(a11y_flow, name, ()) for name in ("ipad-portrait", "ipad-landscape", "ipad-pro")]
                 cases += [(motion_case, "ipad-portrait", (reduce,)) for reduce in (False, True)]
@@ -2364,7 +2149,7 @@ def main():
     if args.show_pass:
         print("\n".join(run.notes))
     print("\n".join(run.failures) if run.failures else "")
-    print(f"{len(run.notes)} passed, {len(run.failures)} failed; screenshots in {qa_root}/phase-1..7/")
+    print(f"{len(run.notes)} passed, {len(run.failures)} failed; screenshots in {qa_root}/phase-1..8/")
     sys.exit(1 if run.failures else 0)
 
 

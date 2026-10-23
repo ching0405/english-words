@@ -167,7 +167,7 @@ def validate(root):
             if not ID_RE.match(tid):
                 rep.error(f"{where}: id must be lowercase letters, digits, underscore")
             if tid.startswith("my_"):
-                rep.error(f"{where}: id must not start with my_ (kept for themes a parent adds on the device)")
+                rep.error(f"{where}: id must not start with my_ (used by the old parent corner on devices)")
             if tid in theme_ids:
                 rep.error(f"{where}: duplicate theme id")
             theme_ids.add(tid)
@@ -192,7 +192,7 @@ def validate(root):
             if not ID_RE.match(wid):
                 rep.error(f"{where}: id must be lowercase letters, digits, underscore (e.g. teddy_bear)")
             if wid.startswith("my_"):
-                rep.error(f"{where}: id must not start with my_ (kept for words a parent adds on the device; a word from a parent backup gets a new id, see ADDING_WORDS.md)")
+                rep.error(f"{where}: id must not start with my_ (used by the old parent corner on devices; a word from a parent backup gets a new id, see docs/ADD_CONTENT.md)")
             if wid in ids:
                 rep.error(f"{where}: duplicate id")
             ids.add(wid)
@@ -236,9 +236,9 @@ def validate(root):
     return rep
 
 
-def mp3_format(path):
+def mp3_format(path, data=None, _skipped=False):
     """(sample rate, kbps, 'mono'|'stereo') from the first MPEG audio frame, or None."""
-    d = path.read_bytes()[:64 * 1024]
+    d = data if data is not None else path.read_bytes()[:64 * 1024]
     i = 0
     if d[:3] == b"ID3" and len(d) >= 10:
         i = 10 + ((d[6] & 0x7F) << 21 | (d[7] & 0x7F) << 14 | (d[8] & 0x7F) << 7 | (d[9] & 0x7F))
@@ -253,6 +253,11 @@ def mp3_format(path):
     b, r = d[i + 2] >> 4, (d[i + 2] >> 2) & 3
     if not rates or r == 3 or b in (0, 15):
         return None
+    # A first frame holding only the Xing/Info header (ffmpeg, LAME) may use
+    # another bitrate: read the frame after it.
+    size = (144 if version == 3 else 72) * kbps[b] * 1000 // rates[r] + ((d[i + 2] >> 1) & 1)
+    if not _skipped and (b"Xing" in d[i:i + size] or b"Info" in d[i:i + size]):
+        return mp3_format(path, d[:i] + d[i + size:], True)
     return rates[r], kbps[b], "mono" if d[i + 3] >> 6 == 3 else "stereo"
 
 

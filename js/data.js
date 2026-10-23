@@ -6,7 +6,7 @@
   'use strict';
 
   var SETTINGS_KEY = 'ew.settings.v1';
-  var DEFAULTS = { showEnglish: true, showChinese: false };
+  var DEFAULTS = { showEnglish: true, showChinese: false, music: true };
 
   function getJSON(url) {
     return fetch(url, { cache: 'no-cache' }).then(function (r) {

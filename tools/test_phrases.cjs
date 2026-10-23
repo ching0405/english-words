@@ -1,8 +1,8 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const P=require('../js/phrases'),Progress=require('../js/progress'),phrases=require('../data/phrases.json');
-test('only Tim’s seven phrases, distinct namespaced IDs and finite rounds',()=>{
- assert.deepEqual(phrases.map(p=>p.english),['Thank you.','Goodbye.','What is your name?','I am ready.','Hello.','Sorry.','Please.']);
- const round=P.round(phrases,()=>.5);assert.equal(new Set(round.map(p=>p.id)).size,7);
+test('every phrase once per round, distinct namespaced IDs, at most four words',()=>{
+ assert.equal(new Set(phrases.map(p=>p.id)).size,phrases.length);
+ const round=P.round(phrases,()=>.5);assert.equal(round.length,phrases.length);assert.equal(new Set(round.map(p=>p.id)).size,phrases.length);
  phrases.forEach(p=>{assert.match(p.id,/^phrase_/);assert.ok(P.tokens(p).length<=4);P.tokens(p).forEach((_,i)=>{assert.ok(P.accepts(p,i,i));assert.ok(!P.accepts(p,i,(i+1)%4));});assert.ok(!P.accepts(p,4,4));});
 });
 test('v3 saves preserve words, phrases, jar and tomorrow review independently',()=>{
@@ -20,8 +20,9 @@ test('scenario choices include answer once, at most four unique options even wit
  assert.equal(P.accepts(phrases[0],-1,-1),false);assert.equal(P.accepts(phrases[0],.5,.5),false);
 });
 
-test('order game uses only the multi-word phrases, without adding any',()=>{
- assert.deepEqual(P.orderable(phrases).map(p=>p.english),['Thank you.','What is your name?','I am ready.']);
+test('order game uses only the multi-word phrases (2–4 words), without adding any',()=>{
+ assert.deepEqual(P.orderable(phrases).map(p=>p.id),phrases.filter(p=>P.tokens(p).length>=2).map(p=>p.id));
+ assert.ok(P.orderable(phrases).length>0);
 });
 
 test('phrase review: due first, then missed and not relearned, at most n',()=>{

@@ -1,5 +1,6 @@
-// Screens: home -> themes -> cards, and home -> games -> play -> result
-// (games live in js/games/). All word data comes from data/*.json.
+// Screens: home -> themes -> cards, and themes -> games -> play -> result
+// (games live in js/games/); home -> phrases -> cards (phrase deck), and
+// phrases -> phraseGames -> play (js/phrase-ui.js). All data comes from data/*.json.
 // Children may not read yet: every step is spoken (Chinese instructions,
 // English words) and text on cards is only an optional helper for parents.
 (function () {
@@ -12,8 +13,9 @@
     noVoice: '這台裝置不能朗讀英文，請改用 Safari 或 Chrome。',
     failed: '聲音沒有播出來，再點一次試試看。'
   };
-  // base: the built-in lists from data/; words/themes: those plus this device's own (js/custom.js).
-  var state = { base: null, words: [], themes: [], list: [], i: 0, settings: Data.settings.load(), toldCards: false };
+  // base: the built-in lists from data/.
+  // deck: 'words' or 'phrases', what #cards is showing.
+  var state = { base: null, words: [], themes: [], phrases: [], list: [], i: 0, deck: 'words', settings: Data.settings.load(), told: {} };
 
   // Keyboard and VoiceOver users: focus that was on a button of the old
   // screen would stay on a hidden element, so it moves to the new screen.
@@ -35,8 +37,8 @@
       Speech.zh('themes.pick');
     }
     if (id === 'games') Games.menu();
-    if (id === 'phrases') { Phrases.menu(); Speech.zh('phrases.pick'); }
-    if (id === 'parent') Parent.render();
+    if (id === 'phrases') { buildPhrases(); Speech.zh('phrases.home'); }
+    if (id === 'phraseGames') { Phrases.menu(); Speech.zh('games.pick'); }
     Jar.renderAll();
     if (id === 'home' && window.Pwa) Pwa.atHome(); // a new version waits for the home screen
     keepFocus(document.getElementById(id));
@@ -66,8 +68,7 @@
   // Today's review card: small pictures of the words waiting (up to 5, then
   // a "+"), or a check mark when nothing is waiting. No numbers or text.
   var REVIEW_PICS = 5;
-  function reviewCard() {
-    var dueWords = Progress.due(state.words);
+  function reviewCard(dueWords, open) {
     var due = dueWords.length;
     var b = document.createElement('button');
     b.type = 'button';
@@ -101,57 +102,87 @@
     label.className = 'review-text';
     label.append(zh, en, dots);
     b.append(label);
-    b.addEventListener('click', function () { Games.review(); });
+    b.addEventListener('click', open);
     return b;
   }
 
   function buildThemes() {
     var grid = $('#themeGrid');
     grid.textContent = '';
-    grid.appendChild(reviewCard());
+    grid.appendChild(reviewCard(Progress.due(state.words), function () { Games.review(); }));
     state.themes.forEach(function (th) {
-      var n = Data.wordsInTheme(state.words, th.id).length;
-      if (!n) return;
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'theme-card';
-      b.style.setProperty('--theme', th.color);
-      b.dataset.theme = th.id;
-      b.setAttribute('aria-label', th.chinese + ' ' + th.english);
-      var img = document.createElement('img');
-      img.src = th.icon;
-      img.alt = '';
-      var zh = document.createElement('span');
-      zh.className = 'theme-zh';
-      zh.textContent = th.chinese;
-      var en = document.createElement('span');
-      en.className = 'theme-en aux-en';
-      en.lang = 'en';
-      en.textContent = th.english;
-      // Progress: 0–3 filled stars (see Progress.themeStars).
-      var stars = document.createElement('span');
-      var got = Progress.themeStars(state.words, th.id);
-      stars.className = 'theme-stars';
-      stars.dataset.stars = String(got);
-      b.setAttribute('aria-label', th.chinese + ' ' + th.english + ' · ' + n + ' cards · ' + got + '/3');
-      for (var k = 0; k < 3; k++) stars.appendChild(icon('#i-star', 'theme-star' + (k < got ? ' on' : '')));
-      b.append(img, zh, en, stars);
-      b.addEventListener('click', function () { openTheme(th.id); });
-      grid.appendChild(b);
+      var list = Data.wordsInTheme(state.words, th.id);
+      if (!list.length) return;
+      grid.appendChild(themeCard(th, list.length, Progress.themeStars(state.words, th.id), function () { openTheme(th.id); }));
     });
   }
 
+  // A deck card: picture, Chinese and English name, 0–3 stars (Progress.themeStars).
+  function themeCard(th, n, got, open) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'theme-card';
+    b.style.setProperty('--theme', th.color);
+    b.dataset.theme = th.id;
+    var img = document.createElement('img');
+    img.src = th.icon;
+    img.alt = '';
+    var zh = document.createElement('span');
+    zh.className = 'theme-zh';
+    zh.textContent = th.chinese;
+    var en = document.createElement('span');
+    en.className = 'theme-en aux-en';
+    en.lang = 'en';
+    en.textContent = th.english;
+    var stars = document.createElement('span');
+    stars.className = 'theme-stars';
+    stars.dataset.stars = String(got);
+    b.setAttribute('aria-label', th.chinese + ' ' + th.english + ' · ' + n + ' cards · ' + got + '/3');
+    for (var k = 0; k < 3; k++) stars.appendChild(icon('#i-star', 'theme-star' + (k < got ? ' on' : '')));
+    b.append(img, zh, en, stars);
+    b.addEventListener('click', open);
+    return b;
+  }
+
+  // Phrases, like the word area: today's review, then one deck of every phrase.
+  // Its stars use the theme rule over all phrases, kept as best.phrases.
+  var PHRASE_DECK = { id: 'phrases', chinese: '句子卡', english: 'Phrase cards', color: '#c4e8ff', icon: 'images/phrases/hello.svg' };
+  function buildPhrases() {
+    var grid = $('#phraseGrid');
+    grid.textContent = '';
+    var list = state.phrases;
+    if (!list.length) return;
+    grid.appendChild(reviewCard(Progress.due(list), function () { Phrases.review(); }));
+    var asTheme = list.map(function (p) { return { id: p.id, theme: 'phrases' }; });
+    grid.appendChild(themeCard(PHRASE_DECK, list.length, Progress.themeStars(asTheme, 'phrases'), function () { openDeck(list, 'phrases'); }));
+  }
+
   function openTheme(id) {
+    openDeck(Data.wordsInTheme(state.words, id), 'words');
+  }
+
+  // Word or phrase cards on the same screen; the back button returns to their area.
+  function setDeck(kind) {
+    state.deck = kind;
+    var phrases = kind === 'phrases';
+    $('#cards').classList.toggle('phrase-deck', phrases);
+    var back = $('#cards .bar [data-go]');
+    back.dataset.go = phrases ? 'phrases' : 'themes';
+    back.setAttribute('aria-label', phrases ? '回生活句子 Phrases' : '回主題 Themes');
+  }
+
+  function openDeck(list, kind) {
     state.reviewing = false;
-    state.list = Data.wordsInTheme(state.words, id);
+    state.list = list;
     state.i = 0;
+    setDeck(kind);
     state.list.forEach(function (w) { new Image().src = w.image; });
     show('cards');
     renderCard(0);
     // First time: explain in Chinese, then say the word (queued after it).
-    if (!state.toldCards) {
-      state.toldCards = true;
-      Speech.zh('cards.howto');
+    if (!state.told[kind]) {
+      state.told[kind] = true;
+      Speech.zh(kind === 'phrases' ? 'phrases.cards' : 'cards.howto');
       speakCurrent(true);
     } else {
       speakCurrent();
@@ -163,6 +194,7 @@
     state.list = list;
     state.i = 0;
     state.reviewing = true;
+    setDeck('words');
     show('cards');
     renderCard(0);
     Speech.zh(intro);
@@ -178,7 +210,18 @@
     var img = $('#picImg');
     img.src = w.image;
     img.alt = w.english;
-    $('#wordEn').textContent = w.english;
+    var en = $('#wordEn');
+    en.textContent = '';
+    // Phrases: one span per word, lit while it is spoken.
+    if (state.deck === 'phrases') {
+      w.english.split(' ').forEach(function (part) {
+        var span = document.createElement('span');
+        span.textContent = part;
+        en.appendChild(span);
+      });
+    } else {
+      en.textContent = w.english;
+    }
     $('#wordZh').textContent = w.chinese;
     $('#progress').textContent = (state.i + 1) + ' / ' + state.list.length;
     $('#prevBtn').disabled = state.i === 0;
@@ -221,7 +264,21 @@
 
   function speakCurrent(queue) {
     var w = state.list[state.i];
-    if (w) Speech.play(w, { queue: queue === true });
+    if (!w) return;
+    if (state.deck !== 'phrases') { Speech.play(w, { queue: queue === true }); return; }
+    var spans = $('#wordEn').children;
+    var light = function (i) { Array.prototype.forEach.call(spans, function (s, k) { s.classList.toggle('lit', k === i); }); };
+    Speech.play(w, {
+      queue: queue === true,
+      onstart: function () { light(0); },
+      onboundary: function (charIndex) {
+        // Word i starts after i spaces: count the spaces before charIndex.
+        light(w.english.slice(0, charIndex + 1).split(' ').length - 1);
+      },
+      onend: function () { light(-1); }
+    });
+    // Chinese switched on: the recorded meaning follows the sentence.
+    if (document.body.classList.contains('show-zh')) Speech.zh('zh.' + w.id, { queue: true });
   }
 
   // Tapping the picture: the word's own little action and sound, then the word.
@@ -239,6 +296,10 @@
     document.body.classList.toggle('show-zh', s.showChinese);
     $('#enBtn').setAttribute('aria-pressed', String(s.showEnglish));
     $('#zhBtn').setAttribute('aria-pressed', String(s.showChinese));
+    var music = $('#musicBtn');
+    music.setAttribute('aria-pressed', String(s.music));
+    music.querySelector('use').setAttribute('href', s.music ? '#i-music' : '#i-music-off');
+    Music.setOn(s.music);
     Data.settings.save(s);
   }
 
@@ -268,6 +329,24 @@
     });
     if (type === 'unsupported') toast(TEXT.noVoice);
     if (type === 'error') toast(TEXT.failed);
+    // Background music steps back while anything is spoken.
+    if (type === 'busy') Music.duck(true);
+    if (type === 'idle') Music.duck(false);
+  });
+
+  // ---------- background music (js/music.js)
+  // Any tap may start it (iOS needs one) or wake it after the iPad paused it.
+  document.addEventListener('click', function () { Music.start(); }, true);
+  var sleepTimer = null;
+  document.addEventListener('visibilitychange', function () {
+    clearTimeout(sleepTimer);
+    if (document.visibilityState !== 'hidden') return;
+    Music.pause();
+    // After the fade, let the sound sleep; the next tap wakes it.
+    sleepTimer = setTimeout(function () {
+      var c = Fx.context && Music.playing ? Fx.context() : null;
+      if (c && document.visibilityState === 'hidden' && c.suspend) c.suspend();
+    }, 300);
   });
 
   // ---------- wiring
@@ -282,6 +361,7 @@
     $('#startBtn').addEventListener('click', function () { firstTap('themes'); });
     $('#phrasesBtn').addEventListener('click', function () { firstTap('phrases'); });
     $('#gamesBtn').addEventListener('click', function () { firstTap('games'); });
+    $('#phraseGamesBtn').addEventListener('click', function () { firstTap('phraseGames'); });
     Games.bind();
     // A soft pop on menu and navigation buttons. Capture phase, so a button's
     // own sound (if any) starts after it and replaces it.
@@ -305,6 +385,10 @@
     $('#sayBtn').addEventListener('click', function () { speakCurrent(); });
     $('#prevBtn').addEventListener('click', function () { move(-1); });
     $('#nextBtn').addEventListener('click', function () { move(1); });
+    $('#musicBtn').addEventListener('click', function () {
+      state.settings.music = !state.settings.music;
+      applySettings();
+    });
     $('#enBtn').addEventListener('click', function () {
       state.settings.showEnglish = !state.settings.showEnglish;
       applySettings();
@@ -321,39 +405,25 @@
     });
   }
 
-  // Built-in lists plus the parent's own words, phrases and themes.
+  // The built-in lists from data/ (phrases arrive a moment later).
   function applyData() {
-    var mine = Custom.view();
-    state.words = state.base.words.concat(mine.words);
-    state.themes = state.base.themes.concat(mine.themes);
+    state.words = state.base.words;
+    state.themes = state.base.themes;
     buildThemes();
     Games.build(state.words, state.themes);
-    if (state.base.phrases) Phrases.build(state.base.phrases.concat(mine.phrases));
+    state.phrases = state.base.phrases || [];
+    if (state.base.phrases) Phrases.build(state.base.phrases);
     Jar.renderAll();
-  }
-
-  // What the parent page checks against: built-in items and their pictures.
-  function builtIn() {
-    var b = state.base, phrases = b.phrases || [];
-    var gallery = [];
-    b.words.concat(phrases).forEach(function (w) { if (gallery.indexOf(w.image) < 0) gallery.push(w.image); });
-    return { words: b.words, phrases: phrases, themes: b.themes, gallery: gallery };
   }
 
   function start() {
     Speech.init();
     applySettings();
     bind();
-    Parent.bind({ builtIn: builtIn, changed: applyData, toast: toast });
-    // Words added or deleted in another tab show up here too.
-    Custom.onChange(function () {
-      if (!state.base) return;
-      applyData();
-      if (!$('#parent').hidden) Parent.render();
-    });
-    Promise.all([Data.loadWords(), Custom.load()]).then(function (res) {
-      var d = res[0];
+    Data.loadWords().then(function (d) {
       state.base = { words: d.words, themes: d.themes, phrases: null };
+      // Which lines have an mp3: one not recorded yet is skipped, never read by TTS.
+      Data.getJSON('audio/zh/manifest.json').then(function (m) { Speech.setRecorded(Object.keys(m)); }).catch(function () { /* play and report as before */ });
       return Data.loadVoiceLines(d.themes).then(function (lines) { Speech.setLines(lines); return d; });
     }).then(function () {
       applyData();

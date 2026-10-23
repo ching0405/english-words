@@ -2,14 +2,15 @@
 """Run every check in one go and print one table (phase 7).
 
 Order: Node unit tests, data validators and their error cases, the offline
-list (build-sw --check, includes the size cap), parent data safety, selftest.
+list (build-sw --check, includes the size cap), Chinese loudness
+(normalize-audio --check), selftest.
 Every step runs even after a failure, so one run shows everything that broke.
 Screenshots go to /tmp as usual; nothing is written into the repo unless --qa.
 
 Usage: python3 tools/check-all.py               everything (selftest takes about an hour)
        python3 tools/check-all.py --quick       no browser: unit tests, validators, build-sw (about a minute)
        python3 tools/check-all.py --twice       selftest twice in a row
-       python3 tools/check-all.py --qa          selftest/datasafety screenshots into qa/
+       python3 tools/check-all.py --qa          selftest screenshots into qa/
        python3 tools/check-all.py --lighthouse  also tools/lighthouse.py (needs network once)
 Exit 1 when any step fails.
 """
@@ -49,9 +50,9 @@ def run(name, argv):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--quick", action="store_true", help="skip the browser tests (datasafety, selftest)")
+    ap.add_argument("--quick", action="store_true", help="skip the browser tests (selftest)")
     ap.add_argument("--twice", action="store_true", help="run selftest twice in a row")
-    ap.add_argument("--qa", action="store_true", help="pass --qa to datasafety and selftest")
+    ap.add_argument("--qa", action="store_true", help="pass --qa to selftest")
     ap.add_argument("--lighthouse", action="store_true", help="also run tools/lighthouse.py")
     args = ap.parse_args()
     qa = ["--qa"] if args.qa else []
@@ -62,9 +63,9 @@ def main():
         ("validate-phrases", [PY, "tools/validate-phrases.py"]),
         ("test_validate_phrases", [PY, "tools/test_validate_phrases.py"]),
         ("build-sw --check", [PY, "tools/build-sw.py", "--check"]),
+        ("normalize-audio --check", [PY, "tools/normalize-audio.py", "--check"]),
     ]
     if not args.quick:
-        steps.append(("test_datasafety", [PY, "tools/test_datasafety.py", *qa]))
         for i in range(2 if args.twice else 1):
             steps.append((f"selftest{' run ' + str(i + 1) if args.twice else ''}", [PY, "tools/selftest.py", *qa]))
         if args.lighthouse:

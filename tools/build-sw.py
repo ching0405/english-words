@@ -17,7 +17,7 @@ import hashlib, json, pathlib, re, sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PATTERNS = ["index.html", "manifest.webmanifest", "icons/*.png", "icons/*.svg", "css/*.css",
             "js/*.js", "js/games/*.js", "data/*.json", "images/**/*.svg", "images/**/*.png",
-            "images/**/*.webp", "audio/**/*.mp3"]
+            "images/**/*.webp", "audio/**/*.mp3", "audio/zh/manifest.json"]
 MAX_TOTAL = 2_500_000   # 2.5 MB; 1.27 MB at phase 7
 MAX_FILE = 300_000      # 300 KB; the biggest at phase 7 is icons/icon-512.png, 51 KB
 BLOCK = re.compile(r"(// <build-sw>[^\n]*\n).*?(// </build-sw>)", re.S)

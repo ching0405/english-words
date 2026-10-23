@@ -1,6 +1,27 @@
 # 交接手冊
 
-## 目前狀態（第 7 階段完成，2026-10-23，Claude，本機分支 `claude/phase-7-final`）
+## 目前狀態（第 8 階段完成，2026-10-23，Claude，本機分支 `claude/phase-8-tim-feedback`）
+
+**這是什麼**：給還不識字的幼兒在 iPad 上玩的看圖學英文網站（純靜態 HTML＋CSS＋JS，沒有後端、沒有建置步驟）。內容是 13 個單字（動物 8、萬聖節 5）、7 句生活句子。單字區和句子區的排法一樣：上面「玩遊戲」，下面「今日複習」和瀏覽用的卡片。單字遊戲：聽音找圖、連連看、翻牌記憶；句子遊戲：聽句子找圖、排句子。中文全部是預錄 mp3（40 句，−16 LUFS），英文用裝置朗讀。很小聲的背景音樂（程式產生），首頁音符鍵可關。可以加到主畫面、離線玩。線上版（`origin/main` = `1d5953a`）還是第 7 階段，第 8 階段**沒有推送**。
+
+**第 8 階段做了什麼**（Tim 的 4 項，計畫 `/home/box/claude-runs/english-words/phase-8-plan.md`，報告 `phase-8-report.md`）：
+1. **家長功能拿掉**（`8171a87`）：齒輪、算術門、家長頁、`js/custom.js`、`js/parent.js` 和它們的測試都刪了。新增內容只照 **`docs/ADD_CONTENT.md`**（取代 ADDING_WORDS／ADDING_PHRASES）。舊裝置上的 `ew.custom.v1`、IndexedDB `picture-words`、進度裡的 `my_*` 紀錄**不讀也不刪**（退版還在）；內建進度、星星罐、Aa／中設定照用（selftest `legacy_case`）。清除進度改用 iPad 設定刪網站資料（實機清單 H 段）。
+2. **句子分成瀏覽和遊戲**（`d1fc20d`）：`#phrases` 跟 `#themes` 一樣：「玩遊戲」鈕 → `#phraseGames`（聽句子找圖、排句子），下面「今日複習」卡和「句子卡」卡（0–3 星，`best.phrases`）。句子卡用單字卡的 `#cards` 畫面（箭頭、滑動、喇叭、Aa／中、念到的字會亮、開「中」接 `zh.phrase_*`，看完一疊罐子 +1）。新台詞 `phrases.home`，`phrases.pick` 不用了。還沒錄音的新台詞安靜跳過（`Speech.setRecorded`，讀 `audio/zh/manifest.json`），不用 TTS。
+3. **中文音量**（`ccadaf3`）：原檔原封不動在 `audio-src/zh/`（不進離線清單），`tools/normalize-audio.py` 做出 `audio/zh/`：−16 LUFS、true peak ≤ −1.5 dBTP、24 kHz／48 kbps／單聲道、長度不變。結果 −16.2～−15.9 LUFS（原本 −21.7～−17.9），表在 `qa/phase-8/loudness.tsv`。`gen-voice.py` 錄完自動調。英文朗讀的音量在 `js/speech.js` `EN_VOLUME`（預設 1）。答對的 sparkle 音效比稱讚小 7 LU，沒有改。
+4. **背景音樂**（`68e689e`）：`js/music.js` 第一次點擊後用 OfflineAudioContext 算出 32 秒無縫循環（C 大調五聲音階音樂盒，90 BPM），約 −32 LUFS；念語音時（`Speech` 的 `busy`／`idle`）降 12 dB，佇列空了 0.6 秒後回來。首頁左下（原齒輪位置）音符開關，存在 `ew.settings.v1.music`（預設開）；手機橫放在左上。切到背景淡出並讓聲音睡著，下一次點擊恢復。靜音鍵：`navigator.audioSession.type = 'playback'`（iPadOS 16.4+），音效和音樂跟語音一樣照常出聲。試聽：`python3 tools/render-bgm.py out.mp3`。
+   - **v2（Tim：「太輕柔了，可以活潑一點」）**：120 BPM（原 90）、16 小節仍是 32 秒循環；旋律高一個八度、改 triangle 音色；低音改成彈跳的八分音符；加輕輕的沙鈴（反拍，只在 6 kHz 以上）和木魚（第 2、4 拍）；整體低通 3.6 kHz（原 2.4）。遊戲裡音量照舊約 −32 LUFS、閃避時 −44（`LEVEL` 1.2），閃避和開關都沒改。試聽 `~/claude-runs/english-words/bgm-preview-v2.mp3`。
+
+**怎麼測**：`python3 tools/check-all.py`（約半小時到一小時）；`--quick` 不開瀏覽器，約一分鐘（含 `normalize-audio --check`）。selftest 多了 `--only music`，`--only parent` 和 `test_datasafety.py` 已刪。
+
+**待 Tim 決定**：
+1. iPad 實聽中文和英文是否一樣大聲（實機清單 A6）；不平衡就調 `EN_VOLUME` 或 `normalize-audio.py --target -14`，不用重錄。
+2. 背景音樂好不好聽（試聽 `~/claude-runs/english-words/bgm-preview.mp3`）。
+3. 什麼時候推送（照 `docs/RELEASE_CHECKLIST.md` 第 4 段）。
+4. 之前留下的：翻牌記憶偶發不翻回（health-audit 第 2 項）、`sw.js` Range 416 與離線安裝失敗提示（第 10、11 項）、`Aa` 的無障礙名稱加「Aa」。
+
+**已知限制**：全部測試都是 Chrome 無頭瀏覽器模擬 iPad；背景音樂在 iOS 被打斷後的恢復、`audioSession`、實際音量平衡都要 iPad 實機確認（`docs/IOS_DEVICE_CHECKLIST.md` A4、A6、D 段）。第一次開啟一定要有網路。Safari 分頁和主畫面 App 的進度分開存。
+
+## 第 7 階段結束時的狀態（歷史紀錄，家長功能已在第 8 階段移除）
 
 **這是什麼**：給還不識字的幼兒在 iPad 上玩的看圖學英文網站（純靜態 HTML＋CSS＋JS，沒有後端、沒有建置步驟）。內容是 13 個單字（動物 8、萬聖節 5）、7 句生活句子。玩法：單字卡、聽音找圖、連連看、翻牌記憶、生活句子（句子卡／聽句子找圖／排句子）、兩種今日複習、星星罐。中文全部是預錄 mp3（40 句），英文用裝置朗讀；家長可以在裝置上自己加字和句子（齒輪長按 2 秒＋算術題）。可以加到主畫面、離線玩。
 
@@ -46,7 +67,7 @@
 - Safari 分頁和主畫面 App 的進度分開存。
 - 家長自錄中文沒有做。
 
-## 階段 6：家長在裝置上自己加單字／句子（Claude，分支 `claude/phase-6-parent-add`）
+## 階段 6：家長在裝置上自己加單字／句子（Claude，分支 `claude/phase-6-parent-add`；第 8 階段已移除）
 
 **2026-10-23 Codex 收尾驗收完成**：本機分支 `codex/phase-6-acceptance`，由 `4997486` 接手。最終同一測試版本 `278b0ea` 的完整 selftest 依序兩次均 **1955 passed／0 failed**；正式家長 `--qa` 為 **263／0**，67 張截圖在 `qa/phase-6/`，已人工檢視。Node 51／0、兩組資料驗證與錯誤案例、`build-sw --check` 全過。三種 iPad 的家長空頁／有資料頁／新增表單完整 axe 共九次 0 violations（`axe-results.json`）。齒輪增加瀏覽器時鐘邊界測試，900ms 放手／移出／取消不開門、1999ms 關、2000ms 開，未發現提早放手開門的程式錯誤，`js/parent.js` 未改。修正測試復原導航等待隱藏按鈕的問題，並保留超時完整診斷。前期失敗與未重現情況沒有省略，詳見 `/home/box/claude-runs/english-words/phase-6-acceptance-report.md`；摘要在 `qa/phase-6/acceptance-results.txt`。正式截圖不受其他 baseline 的共用暫存目錄影響；最終兩輪改用各自的 `/tmp` 子目錄。iPad 實機待確認項目見報告。只做本機 commit，未推送、未部署，不開始第 7 階段。
 
@@ -120,13 +141,13 @@
 ## 檔案結構
 
 ```
-index.html              畫面：#home、#themes、#cards、#games、#play、#result（全部用相對路徑）
+index.html              畫面：#home、#themes、#cards、#games、#phrases、#phraseGames、#play、#result（全部用相對路徑）
 css/app.css             版面與風格（iPad 優先；顏色見 STYLE_GUIDE.md）
-js/data.js              Data：讀 JSON、依主題篩選單字、家長設定（localStorage）
+js/data.js              Data：讀 JSON、依主題篩選單字、設定（Aa／中、音樂；localStorage ew.settings.v1）
 js/speech.js            Speech：單一播放佇列。英文單字（錄音檔優先、否則 TTS en-US）、中文台詞（預錄 mp3，失敗顯示提示，無中文 TTS）
 data/voice-zh.json      中文台詞清單（key → 文字），主題名稱另取自 themes.json（theme.<id>）
-audio/zh/               中文台詞 mp3（zh-TW-HsiaoChenNeural，-8%）＋ manifest.json（文字與 hash）
-tools/gen-voice.py      錄中文台詞（edge-tts，只錄有變動的句子）
+audio/zh/               中文台詞 mp3（zh-TW-HsiaoChenNeural，-8%，normalize 到 −16 LUFS）＋ manifest.json（文字、hash、原檔 sha、增益、響度）
+tools/gen-voice.py      錄中文台詞（edge-tts，只錄有變動的句子；原檔進 audio-src/zh/，再自動 normalize）
 js/fx.js                Fx：Web Audio 合成音效＋左右搖擺動作（Web Animations），每個字有固定一種搖法
 js/quiz.js              Quiz：出題引擎（純函式，瀏覽器和 Node 共用）
 js/progress.js          Progress：每字學習紀錄＋日曆天間隔複習＋時鐘防護＋星星罐／主題最佳星數＋存檔版本／遷移／損毀重置（瀏覽器和 Node 共用）
@@ -134,9 +155,12 @@ js/jar.js               Jar：星星罐畫面、星星飛進罐子、裝滿慶�
 js/games/shell.js       Games：遊戲選單、主題選擇、語音回饋、星星結算、計時器管理
 js/games/<id>.js        各遊戲：listen 聽音找圖、match 連連看、memory 翻牌記憶
 js/app.js               畫面切換（App.show）、卡片、滑動、文字開關、內建＋自訂資料合併
-js/custom.js            家長自訂單字／句子：檢查、id、localStorage＋IndexedDB、備份匯出匯入（瀏覽器和 Node 共用）
-js/parent.js            家長入口（長按＋算術）、家長專區、新增／編輯表單、照片縮圖
-tools/test_custom.cjs   自訂資料單元測試
+js/music.js             Music：背景音樂（OfflineAudioContext 產生 32 秒循環、閃避、開關）
+js/phrase-ui.js         句子遊戲（聽句子找圖、排句子）和句子今日複習；句子卡在 #cards（app.js openDeck）
+audio-src/zh/           中文台詞原檔（edge-tts 原樣，不進離線清單）
+tools/normalize-audio.py 從原檔做出 −16 LUFS 的 audio/zh/（--check 只量）
+tools/render-bgm.py     背景音樂試聽檔與響度量測
+docs/ADD_CONTENT.md     新增單字／主題／句子的唯一流程（給維護 bot）
 data/words.json         單字（唯一資料來源）
 data/themes.json        主題
 images/words/<id>.svg   單字圖（由 tools/art/draw_words.py 產生）
@@ -145,8 +169,7 @@ tools/validate-words.py 資料驗證（只用標準函式庫）
 tools/test_validate_words.py  驗證器的錯誤案例測試
 tools/test_quiz.cjs     出題引擎單元測試（node --test）
 tools/test_progress.cjs 學習進度單元測試（Asia/Taipei 時區）：日曆天到期、時鐘前後跳、星星只升不降、星星罐、輪流、遷移、損毀、單字增減
-tools/selftest.py       Playwright 自測（5 種尺寸；--only cards|games|progress|phrases|pwa|look|parent|a11y；--qa 才把截圖寫進 qa/）
-tools/test_datasafety.py 家長資料安全回歸（F1–F5，三種 iPad）
+tools/selftest.py       Playwright 自測（5 種尺寸；--only cards|games|progress|phrases|pwa|look|a11y|music；--qa 才把截圖寫進 qa/）
 tools/check-all.py      一鍵跑全部測試，最後印總表（--quick 不開瀏覽器）
 tools/build-sw.py       更新 sw.js 的離線檔案清單和版本號（--check 只檢查，並限制首次下載 ≤ 2.5 MB、單檔 ≤ 300 KB）
 tools/lighthouse.py     Lighthouse PWA／無障礙＋axe 逐畫面檢查（--url 檢查線上網址）
@@ -198,7 +221,7 @@ qa/phase-3/             進度截圖：新裝置、隔天待複習小圖、四�
 - **星星罐**（`js/jar.js`）：首頁右上、主題頁右上、結算畫面都有。每輪結束（遊戲、今日複習、卡片看完一輪）把這輪的星星飛進罐子（遊戲／複習 1–3 顆，卡片看完一輪 1 顆，卡片模式複習 3 顆），語音「星星罐又變滿一點了！」。12 顆裝滿 → 發光＋音效＋「星星罐裝滿了！好棒！我們換一個新的罐子。」，滿的罐子放到旁邊的小架子（最多畫 4 個，更多一個「+」），換新的空罐。點罐子會說「這是你的星星罐，玩完一輪就會放進星星喔！」。
 - 結算畫面跳出的角色是**這一輪出現過的字**。
 - 存檔版本：`VERSION = 3`，`MIGRATIONS[1]`（v1 平面計數，沒發佈過，為之後改格式準備）、`MIGRATIONS[2]`（階段 3 第一版 → 加 best／jar／reviewTurn）。解析失敗、版本比程式新、格式不對 → 原內容存到 `ew.progress.broken`，重新開始；單一欄位壞掉只修那個欄位（罐子星星超過 12 會換算成滿罐）。localStorage 被擋時改存在記憶體。
-- 清除進度：家長專區的「清除學習進度」（階段 6），或主控台 `Progress.clear()`。
+- 清除進度：遊戲裡沒有按鈕（第 8 階段）。家長用 iPad 設定刪網站資料（實機清單 H 段）；開發用主控台 `Progress.clear()`。
 
 ## 小遊戲怎麼運作
 
@@ -235,7 +258,7 @@ qa/phase-3/             進度截圖：新裝置、隔天待複習小圖、四�
 ## 已知限制
 
 - 沒有在 iPad／iPhone 實機測過（只有 Chrome 無頭瀏覽器模擬尺寸與觸控）。實際音色、音量、iOS 是否允許排在中文指示後面的錄音檔、遊戲自動念下一題，都要實機確認。照 `docs/IOS_DEVICE_CHECKLIST.md` 測。
-- 連連看的「圖片 ↔ 英文字」進階版還沒做（要等家長設定入口）。
+- 連連看的「圖片 ↔ 英文字」進階版還沒做。
 - 英文 TTS 音色依裝置而定；沒有安裝英文語音的裝置會用系統預設。中文是預錄的，不受影響。
 - `tools/gen-voice.py` 需要網路（edge-tts 連微軟的線上語音服務）。
 - 直接開 `file://` 讀不到資料（需要 http 伺服器或 GitHub Pages）。

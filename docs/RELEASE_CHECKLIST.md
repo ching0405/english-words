@@ -16,9 +16,9 @@
 ## 1. 推送前（本機）
 
 - [ ] `git status` 乾淨，所有改動都已 commit。
-- [ ] `python3 tools/check-all.py` 最後一行是 `ALL … STEPS PASSED`。這會依序跑單元測試、資料驗證、`build-sw --check`、資料安全測試和完整 selftest，約一小時。
+- [ ] `python3 tools/check-all.py` 最後一行是 `ALL … STEPS PASSED`。這會依序跑單元測試、資料驗證、`build-sw --check`、中文音量檢查和完整 selftest，約半小時到一小時。
 - [ ] `python3 tools/build-sw.py --check`：`sw.js OK`，離線清單 ≤ 2.5 MB（目前 88 個檔案、1.27 MB）。如果說 out of date，先跑 `python3 tools/build-sw.py` 再 commit。
-- [ ] 內建資料沒有被動到：`python3 tools/validate-words.py` 顯示 13 words，`data/phrases.json` 是 7 句，`grep -c '"my_' data/*.json` 全部是 0（家長自己加的字不應進 `data/`）。
+- [ ] 內建資料沒有被動到：`python3 tools/validate-words.py` 顯示的單字數和 `data/phrases.json` 的句數，跟 Tim 核准的清單一樣（第 8 階段是 13 字、7 句），`grep -c '"my_' data/*.json` 全部是 0（舊版家長自訂資料的 id 不應進 `data/`）。新增內容的流程見 `docs/ADD_CONTENT.md`。
 - [ ] 中文沒有用 TTS：selftest 裡「no zh-TW TTS」那幾項都通過（包含在 check-all 裡）。
 - [ ] repo 裡沒有私人照片、帳號或密碼：`git ls-files | grep -iv '^qa/' | grep -iE '\.(jpe?g|heic)$'` 應該沒有輸出。
 

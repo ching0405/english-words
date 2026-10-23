@@ -27,6 +27,12 @@ def validate(rows,root=ROOT):
      svg=ET.parse(f).getroot()
      if svg.tag!='{http://www.w3.org/2000/svg}svg' or svg.get('viewBox')!='0 0 512 512':errors.append('invalid SVG dimensions')
     except ET.ParseError:errors.append('invalid SVG')
+ # The Chinese meaning is spoken (recorded, never TTS): every phrase needs its line.
+ voice=root/'data/voice-zh.json'
+ if voice.is_file():
+  lines=json.loads(voice.read_text(encoding='utf-8'))
+  for id in sorted(ids):
+   if 'zh.'+id not in lines:errors.append('missing zh.'+id+' recording: add it to data/voice-zh.json and run tools/gen-voice.py')
  return errors
 if __name__=='__main__':
  errors=validate(json.loads((ROOT/'data/phrases.json').read_text()))

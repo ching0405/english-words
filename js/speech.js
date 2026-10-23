@@ -8,9 +8,13 @@
 //                            fails, shows a visible error; Chinese never uses TTS.
 //   Speech.setLines(map)     key -> Chinese text (data/voice-zh.json + theme
 //                            names), used for that fallback.
+//   Speech.setRecorded(keys) the lines that have an mp3 (audio/zh/manifest.json);
+//                            a line not recorded yet is skipped silently.
 //   Speech.say(text, opts)   reads any text with TTS (opts.lang, default en-US).
 //   opts.queue = true        play after what is playing now instead of cutting it off
 //   opts.onend = fn          called once when this item ends, fails or is cut off
+//   Speech.on(fn)            fn(type): start / end / error / unsupported for each
+//                            item, busy / idle when the whole queue starts / empties
 //
 // Everything goes through one queue, so a Chinese instruction followed by an
 // English word always plays in that order, whatever each one is made of.
@@ -21,6 +25,9 @@
 
   var ZH_DIR = 'audio/zh/';
   var RATE = { 'en-US': 0.85, 'zh-TW': 0.95 };
+  // English read by the device, 0–1. Chinese mp3s are made at -16 LUFS
+  // (tools/normalize-audio.py); lower this if English still sounds louder on the iPad.
+  var EN_VOLUME = 1;
   // Clear, natural voices seen on iOS/macOS, Android/Chrome and Windows.
   var PREFERRED = {
     'en-US': ['Samantha', 'Google US English', 'Microsoft Aria', 'Microsoft Jenny', 'Ava', 'Allison', 'Alex'],
@@ -31,15 +38,21 @@
   var ttsSupported = !!(synth && window.SpeechSynthesisUtterance);
   var voices = {};          // lang -> chosen SpeechSynthesisVoice
   var lines = {};           // zh key -> text
+  var recorded = null;      // zh key -> true once audio/zh/manifest.json is read
   var listeners = [];
   var player = null;        // one shared <audio>, unlocked by the first tap
   var queue = [];
   var current = null;
   var seq = 0;              // bumped by stop(); stale callbacks compare against it
+  var busy = false;         // something is playing or waiting (background music ducks)
   var SILENCE = 'data:audio/wav;base64,UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
 
   function emit(type) {
     listeners.forEach(function (fn) { try { fn(type); } catch (e) { /* keep others running */ } });
+  }
+
+  function setBusy(value) {
+    if (value !== busy) { busy = value; emit(value ? 'busy' : 'idle'); }
   }
 
   function norm(lang) { return String(lang || '').replace('_', '-').toLowerCase(); }
@@ -111,6 +124,7 @@
     if (player) { try { player.pause(); } catch (e) { /* ignore */ } }
     if (ttsSupported) { try { synth.cancel(); } catch (e) { /* ignore */ } }
     dropped.forEach(function (item) { item.onend(); });
+    setBusy(!!(current || queue.length)); // an onend above may have queued the next line
   }
 
   function enqueue(item, opts) {
@@ -118,10 +132,12 @@
     item.onend = once(function () { if (item.cleanup) item.cleanup(); if (opts.onend) opts.onend(); });
     if (!opts.queue) stop();
     queue.push(item);
+    setBusy(true);
     if (!current) next();
   }
 
   function next() {
+    if (!current && !queue.length) setBusy(false);
     if (current || !queue.length) return;
     var item = current = queue.shift();
     var id = seq;
@@ -152,7 +168,7 @@
         item.boundary(e.charIndex);
       };
       u.pitch = 1.05;
-      u.volume = 1;
+      u.volume = EN_VOLUME;
       u.onstart = function () {
         emit('start');
         if (item.begin) item.begin();
@@ -221,6 +237,12 @@
   }
 
   function zh(key, opts) {
+    // A new line whose mp3 is not recorded yet: say nothing (never TTS).
+    if (recorded && !recorded[key]) {
+      if (!(opts && opts.queue)) stop();
+      if (opts && opts.onend) setTimeout(opts.onend, 0);
+      return false;
+    }
     enqueue({ src: ZH_DIR + key + '.mp3', text: lines[key], lang: 'zh-TW' }, opts);
     return true;
   }
@@ -240,6 +262,7 @@
     say: say,
     stop: stop,
     setLines: function (map) { lines = map || {}; },
+    setRecorded: function (keys) { recorded = {}; (keys || []).forEach(function (k) { recorded[k] = true; }); },
     on: function (fn) { listeners.push(fn); },
     get supported() { return ttsSupported; },
     voice: function (lang) { return voices[lang || 'en-US'] || null; }

@@ -2,10 +2,12 @@
 """Record every Chinese voice line as an mp3 with Microsoft Edge neural TTS.
 
 Lines come from data/voice-zh.json (key -> text) plus each theme name in
-data/themes.json (key "theme.<id>"). Output: audio/zh/<key>.mp3 (24 kHz,
-48 kbps, mono — edge-tts' default) and audio/zh/manifest.json (key -> text
-and hash). Only new or changed lines are recorded (hash of voice + rate +
-text); mp3s for keys that no longer exist are removed. Safe to re-run.
+data/themes.json (key "theme.<id>"). The recordings as edge-tts makes them
+(24 kHz, 48 kbps, mono) go to audio-src/zh/<key>.mp3 (originals, kept as they
+are); then tools/normalize-audio.py makes the played files audio/zh/<key>.mp3,
+all equally loud. audio/zh/manifest.json: key -> text and hash (+ loudness).
+Only new or changed lines are recorded (hash of voice + rate + text); mp3s
+for keys that no longer exist are removed from both folders. Safe to re-run.
 
 Usage: python3 tools/gen-voice.py [--force] [--edge-tts PATH]
 Needs network access (edge-tts calls Microsoft's online voice service).
@@ -14,6 +16,7 @@ import argparse, hashlib, json, pathlib, re, shutil, subprocess, sys, tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT / "audio" / "zh"
+SRC = ROOT / "audio-src" / "zh"
 MANIFEST = OUT / "manifest.json"
 VOICE = "zh-TW-HsiaoChenNeural"
 RATE = "-8%"
@@ -52,11 +55,12 @@ def main():
     except (ValueError, KeyError, json.JSONDecodeError) as e:
         sys.exit(f"ERROR: {e}")
     OUT.mkdir(parents=True, exist_ok=True)
+    SRC.mkdir(parents=True, exist_ok=True)
     old = json.loads(MANIFEST.read_text(encoding="utf-8")) if MANIFEST.exists() else {}
     manifest, made, kept = {}, 0, 0
     for key, text in lines.items():
         h = line_hash(text)
-        mp3 = OUT / f"{key}.mp3"
+        mp3 = SRC / f"{key}.mp3"
         if not args.force and mp3.exists() and old.get(key, {}).get("hash") == h:
             manifest[key] = old[key]
             kept += 1
@@ -72,12 +76,16 @@ def main():
         made += 1
         print(f"recorded {key}: {text}")
     removed = 0
-    for f in OUT.glob("*.mp3"):
-        if f.stem not in lines:
-            f.unlink()
-            removed += 1
-            print(f"removed {f.name} (line no longer used)")
+    for folder in (SRC, OUT):
+        for f in folder.glob("*.mp3"):
+            if f.stem not in lines:
+                f.unlink()
+                removed += folder == SRC
+                print(f"removed {f.relative_to(ROOT)} (line no longer used)")
     MANIFEST.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    # Same loudness for every line: new or changed originals -> audio/zh/.
+    if subprocess.run([sys.executable, str(ROOT / "tools/normalize-audio.py")]).returncode:
+        sys.exit("ERROR: tools/normalize-audio.py failed")
     print(f"OK: {len(lines)} lines ({made} recorded, {kept} unchanged, {removed} removed); voice {VOICE} rate {RATE}")
 
 

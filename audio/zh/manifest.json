@@ -1,162 +1,402 @@
 {
   "themes.pick": {
     "text": "你想看哪一種？點一張圖片。",
-    "hash": "c1d3caaea5f0ea28"
+    "hash": "c1d3caaea5f0ea28",
+    "src": "674729a942d66021",
+    "gain_db": 3.9,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.6,
+    "target": -16.0
   },
   "cards.howto": {
     "text": "點圖片可以再聽一次，點箭頭看下一張。",
-    "hash": "cc61c2f78efdfda9"
+    "hash": "cc61c2f78efdfda9",
+    "src": "67e36d2030516687",
+    "gain_db": 3.9,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.7,
+    "target": -16.0
   },
   "cards.done": {
     "text": "全部看完了，好棒！我們再看一次。",
-    "hash": "5295cfc4ae9baa67"
+    "hash": "5295cfc4ae9baa67",
+    "src": "17a7fff5d32df600",
+    "gain_db": 3.1,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.8,
+    "target": -16.0
   },
   "games.pick": {
     "text": "想玩哪一個遊戲？點一張圖片。",
-    "hash": "daf93dcf0d08f15a"
+    "hash": "daf93dcf0d08f15a",
+    "src": "20d104b6c173e48e",
+    "gain_db": 3.3,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.5,
+    "target": -16.0
   },
   "games.all": {
     "text": "全部的字",
-    "hash": "c3ef545075396aee"
+    "hash": "c3ef545075396aee",
+    "src": "12ca3f377e943b05",
+    "gain_db": 4.0,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.7,
+    "target": -16.0
   },
   "intro.listen": {
     "text": "聽一聽，找出對的圖片。",
-    "hash": "e0598f6e0e6fed2e"
+    "hash": "e0598f6e0e6fed2e",
+    "src": "cb2ea85baa199a4f",
+    "gain_db": 4.5,
+    "limited": true,
+    "lufs": -16.2,
+    "tp": -2.5,
+    "target": -16.0
   },
   "intro.match": {
     "text": "點喇叭聽一聽，再連到對的圖片。",
-    "hash": "c79b0c3aec8bc60b"
+    "hash": "c79b0c3aec8bc60b",
+    "src": "d4d001c89232fa37",
+    "gain_db": 3.5,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.8,
+    "target": -16.0
   },
   "intro.memory": {
     "text": "翻開兩張卡片，找出一樣的圖片。",
-    "hash": "5b4b8f9a02d4e313"
+    "hash": "5b4b8f9a02d4e313",
+    "src": "b56327f068ba66ae",
+    "gain_db": 3.9,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.1,
+    "target": -16.0
   },
   "match.speaker_first": {
     "text": "先點喇叭聽一聽喔。",
-    "hash": "1e9d059e47c9c912"
+    "hash": "1e9d059e47c9c912",
+    "src": "caa95b4dc49d97f8",
+    "gain_db": 3.1,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.7,
+    "target": -16.0
   },
   "match.next_board": {
     "text": "再一次！",
-    "hash": "be58d7dd7b1953c3"
+    "hash": "be58d7dd7b1953c3",
+    "src": "1c76b7874fbd1ca9",
+    "gain_db": 3.3,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.7,
+    "target": -16.0
   },
   "game.try_again": {
     "text": "再聽一次喔。",
-    "hash": "8721524bed051ff2"
+    "hash": "8721524bed051ff2",
+    "src": "d4edbe23621470b0",
+    "gain_db": 3.1,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.7,
+    "target": -16.0
   },
   "praise.1": {
     "text": "答對了！",
-    "hash": "8fd15695fb67e080"
+    "hash": "8fd15695fb67e080",
+    "src": "3d18d649587f960a",
+    "gain_db": 3.1,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.9,
+    "target": -16.0
   },
   "praise.2": {
     "text": "好棒！",
-    "hash": "a941092285fa87eb"
+    "hash": "a941092285fa87eb",
+    "src": "423a6fd5b3483752",
+    "gain_db": 3.2,
+    "limited": true,
+    "lufs": -16.2,
+    "tp": -2.8,
+    "target": -16.0
   },
   "praise.3": {
     "text": "你好厲害！",
-    "hash": "d3bb0ebacfb830b4"
+    "hash": "d3bb0ebacfb830b4",
+    "src": "d033adba3cbae5d5",
+    "gain_db": 2.6,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.8,
+    "target": -16.0
   },
   "praise.4": {
     "text": "太棒了！",
-    "hash": "6bab2fd6f5524b9e"
+    "hash": "6bab2fd6f5524b9e",
+    "src": "b4efd8a8740c8b02",
+    "gain_db": 3.6,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.7,
+    "target": -16.0
   },
   "stars.1": {
     "text": "你拿到一顆星星！",
-    "hash": "8d8c03170f240af5"
+    "hash": "8d8c03170f240af5",
+    "src": "adc70b797a7b5d56",
+    "gain_db": 2.9,
+    "limited": false,
+    "lufs": -16.0,
+    "tp": -2.6,
+    "target": -16.0
   },
   "stars.2": {
     "text": "你拿到兩顆星星！",
-    "hash": "f62e7457a04d16ff"
+    "hash": "f62e7457a04d16ff",
+    "src": "d825e25f5e51a963",
+    "gain_db": 3.0,
+    "limited": false,
+    "lufs": -16.0,
+    "tp": -3.2,
+    "target": -16.0
   },
   "stars.3": {
     "text": "你拿到三顆星星！好棒！",
-    "hash": "738ba1aba2cbbd59"
+    "hash": "738ba1aba2cbbd59",
+    "src": "82132d9c715a5efa",
+    "gain_db": 3.2,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.8,
+    "target": -16.0
   },
   "review.intro": {
     "text": "今天要複習的字來囉！",
-    "hash": "d1817b8c7352a507"
+    "hash": "d1817b8c7352a507",
+    "src": "616f374e90517942",
+    "gain_db": 3.0,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -3.0,
+    "target": -16.0
   },
   "review.none": {
     "text": "今天的字都複習好了！我們再多練習幾個。",
-    "hash": "1325992439ee4d26"
+    "hash": "1325992439ee4d26",
+    "src": "6a3ce072e74c2b5e",
+    "gain_db": 3.3,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.5,
+    "target": -16.0
   },
   "jar.more": {
     "text": "星星罐又變滿一點了！",
-    "hash": "85d2d41e3c35d067"
+    "hash": "85d2d41e3c35d067",
+    "src": "9f2e473432ae4327",
+    "gain_db": 3.3,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.8,
+    "target": -16.0
   },
   "jar.full": {
     "text": "星星罐裝滿了！好棒！我們換一個新的罐子。",
-    "hash": "bf18ebe182a0a082"
+    "hash": "bf18ebe182a0a082",
+    "src": "6d964943bdf8c0c3",
+    "gain_db": 3.2,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.6,
+    "target": -16.0
   },
   "jar.look": {
     "text": "這是你的星星罐，玩完一輪就會放進星星喔！",
-    "hash": "b009502d73177a60"
+    "hash": "b009502d73177a60",
+    "src": "8936a6b8b86e9f2f",
+    "gain_db": 3.1,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.6,
+    "target": -16.0
   },
   "game.ask_again": {
     "text": "剛剛那個字，再聽一次，找出對的圖片。",
-    "hash": "c4280e78cfe1c2e3"
-  },
-  "phrases.pick": {
-    "text": "選一個玩吧！",
-    "hash": "dc0b311d97b7692c"
+    "hash": "c4280e78cfe1c2e3",
+    "src": "69a56bfdde3b505f",
+    "gain_db": 3.9,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.4,
+    "target": -16.0
   },
   "phrases.cards": {
     "text": "點圖片聽一聽，再按箭頭。",
-    "hash": "22e3f65969d29f25"
+    "hash": "22e3f65969d29f25",
+    "src": "9f40b6de564246c9",
+    "gain_db": 4.3,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.6,
+    "target": -16.0
   },
   "phrases.listen": {
     "text": "聽英文，找出對的圖。",
-    "hash": "319a4270f63a4d3f"
+    "hash": "319a4270f63a4d3f",
+    "src": "fb012306eeed3e3a",
+    "gain_db": 4.0,
+    "limited": true,
+    "lufs": -16.2,
+    "tp": -2.5,
+    "target": -16.0
   },
   "phrases.order": {
     "text": "字卡點一下聽，再點一下放。",
-    "hash": "5683e529d9223ec1"
+    "hash": "5683e529d9223ec1",
+    "src": "b120a558e2c7b656",
+    "gain_db": 3.7,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.7,
+    "target": -16.0
   },
   "phrases.review": {
     "text": "複習句子，找出對的圖。",
-    "hash": "e0a7efa09d6514cd"
+    "hash": "e0a7efa09d6514cd",
+    "src": "80781a796c88b376",
+    "gain_db": 3.5,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.6,
+    "target": -16.0
   },
   "phrases.review_done": {
     "text": "句子複習完成，好棒！",
-    "hash": "af30a37d38b00903"
+    "hash": "af30a37d38b00903",
+    "src": "72ae3170a554a26e",
+    "gain_db": 2.7,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.6,
+    "target": -16.0
+  },
+  "phrases.home": {
+    "text": "句子！點圖片看句子卡，或點星星玩遊戲。",
+    "hash": "7f49658ceaa63bab",
+    "src": "04391096b88f52ee",
+    "gain_db": 4.0,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.4,
+    "target": -16.0
   },
   "words.pick": {
     "text": "單字！選圖片看卡片，或點星星玩遊戲。",
-    "hash": "c108f9bfafe898ed"
+    "hash": "c108f9bfafe898ed",
+    "src": "5baa78d7f4248a94",
+    "gain_db": 4.0,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.5,
+    "target": -16.0
   },
   "zh.phrase_thank_you": {
     "text": "謝謝",
-    "hash": "cde1a95abd80bd0f"
+    "hash": "cde1a95abd80bd0f",
+    "src": "c7a52a46ce6015c4",
+    "gain_db": 2.4,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.9,
+    "target": -16.0
   },
   "zh.phrase_goodbye": {
     "text": "再見",
-    "hash": "517a996fa04b1775"
+    "hash": "517a996fa04b1775",
+    "src": "0692d1ca85b07fbb",
+    "gain_db": 3.7,
+    "limited": true,
+    "lufs": -16.2,
+    "tp": -2.6,
+    "target": -16.0
   },
   "zh.phrase_your_name": {
     "text": "你叫什麼名字？",
-    "hash": "dd4cd2139d5c5324"
+    "hash": "dd4cd2139d5c5324",
+    "src": "ce528f024ad6bf23",
+    "gain_db": 4.0,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.6,
+    "target": -16.0
   },
   "zh.phrase_ready": {
     "text": "我準備好了",
-    "hash": "421dedc8a45e7497"
+    "hash": "421dedc8a45e7497",
+    "src": "d85c0a1aa558dc49",
+    "gain_db": 3.2,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.9,
+    "target": -16.0
   },
   "zh.phrase_hello": {
     "text": "你好",
-    "hash": "55b613c6f5b4abda"
+    "hash": "55b613c6f5b4abda",
+    "src": "a8886a13f94bf5c1",
+    "gain_db": 2.3,
+    "limited": false,
+    "lufs": -16.0,
+    "tp": -3.5,
+    "target": -16.0
   },
   "zh.phrase_sorry": {
     "text": "對不起",
-    "hash": "429cc6c889aa1dd2"
+    "hash": "429cc6c889aa1dd2",
+    "src": "2bbc9d17a058131b",
+    "gain_db": 3.8,
+    "limited": false,
+    "lufs": -15.9,
+    "tp": -3.0,
+    "target": -16.0
   },
   "zh.phrase_please": {
     "text": "請",
-    "hash": "722fc06d239858e1"
+    "hash": "722fc06d239858e1",
+    "src": "cd995fa5976dcbf8",
+    "gain_db": 6.1,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.6,
+    "target": -16.0
   },
   "theme.animals": {
     "text": "動物",
-    "hash": "e9e2dc2c89e9ca4c"
+    "hash": "e9e2dc2c89e9ca4c",
+    "src": "0c87172b1debc517",
+    "gain_db": 4.8,
+    "limited": true,
+    "lufs": -16.1,
+    "tp": -2.5,
+    "target": -16.0
   },
   "theme.halloween": {
     "text": "萬聖節",
-    "hash": "40706cd64d56e309"
+    "hash": "40706cd64d56e309",
+    "src": "41da538fda6a5c6c",
+    "gain_db": 3.5,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -2.8,
+    "target": -16.0
   }
 }

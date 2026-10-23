@@ -419,8 +419,29 @@ def rabbit():
 
 
 
+def monkey():
+    fur, lt = "#b07a4f", "#f6d7b0"
+    o = ground()
+    o += tube("M344 418 Q446 418 438 330 Q432 272 386 284 Q356 296 378 322", fur, 16)
+    o += sit_body(fur, lt, lt)
+    for s in (1, -1):
+        X = (lambda x: x) if s == 1 else mirror
+        o += shape("circle", fur, cx=X(132), cy=226, r=46)
+        o += fill("circle", lt, cx=X(134), cy=228, r=26)
+    o += shape("ellipse", fur, cx=256, cy=214, rx=118, ry=112)
+    o += shape("path", fur, line=0, shade=False, d="M228 106 Q240 78 262 92 Q270 72 290 84 Q276 96 274 112 Z")
+    o += line("M232 108 Q242 84 262 96 Q270 78 288 86", 6)
+    o += hl(182, 150, 22, 11, -35)
+    mask = ("M256 176 C238 138 162 146 166 212 C168 240 180 254 188 266 C184 318 220 334 256 334 "
+            "C292 334 328 318 324 266 C332 254 344 240 346 212 C350 146 274 138 256 176 Z")
+    o += shape("path", lt, shade=False, line=6, d=mask)
+    o += face(214, 34, r=14, cheeks=False) + cheek(188, 280) + cheek(324, 280)
+    o += fill("ellipse", INK, cx=246, cy=262, rx=6, ry=8) + fill("ellipse", INK, cx=266, cy=262, rx=6, ry=8)
+    o += smile(256, 288, 30, 22)
+    return o
 
-DRAWINGS = {f.__name__: f for f in (goat, cow, koala, lion, zebra, wolf, rabbit, turtle,
+
+DRAWINGS = {f.__name__: f for f in (goat, cow, koala, lion, zebra, wolf, rabbit, turtle, monkey,
                                      pumpkin, vampire, zombie, witch, monster)}
 
 

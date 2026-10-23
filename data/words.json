@@ -7,6 +7,7 @@
   {"id": "wolf", "english": "wolf", "chinese": "狼", "image": "images/words/wolf.svg", "theme": "animals"},
   {"id": "rabbit", "english": "rabbit", "chinese": "兔子", "image": "images/words/rabbit.svg", "theme": "animals"},
   {"id": "turtle", "english": "turtle", "chinese": "烏龜", "image": "images/words/turtle.svg", "theme": "animals"},
+  {"id": "monkey", "english": "monkey", "chinese": "猴子", "image": "images/words/monkey.svg", "theme": "animals"},
   {"id": "vampire", "english": "vampire", "chinese": "吸血鬼", "image": "images/words/vampire.svg", "theme": "halloween"},
   {"id": "zombie", "english": "zombie", "chinese": "殭屍", "image": "images/words/zombie.svg", "theme": "halloween"},
   {"id": "witch", "english": "witch", "chinese": "女巫", "image": "images/words/witch.svg", "theme": "halloween"},

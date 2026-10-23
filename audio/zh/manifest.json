@@ -23,11 +23,12 @@
     "text": "全部看完了，好棒！我們再看一次。",
     "hash": "5295cfc4ae9baa67",
     "src": "17a7fff5d32df600",
-    "gain_db": 3.1,
+    "gain_db": 6.6,
     "limited": true,
-    "lufs": -16.0,
-    "tp": -2.8,
-    "target": -16.0
+    "lufs": -13.5,
+    "tp": -2.4,
+    "target": -13.0,
+    "trimmed": true
   },
   "games.pick": {
     "text": "想玩哪一個遊戲？點一張圖片。",

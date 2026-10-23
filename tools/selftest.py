@@ -330,8 +330,22 @@ def flow(run, browser, base, name, opts, words, themes):
         n, a = calls(page), audios(page)
         page.click("#nextBtn")  # last card wraps to the first
         run.check(page.inner_text("#progress").replace(" ", "") == f"1/{len(tw)}", f"[{name}] after last card starts again")
-        run.check(zh_said(page, a, "cards.done") and wait_word(page, n, tw[0]["english"]),
+        run.check(wait_word(page, n, tw[0]["english"]) and zh_said(page, a, "cards.done"),
                   f"[{name}] finishing the deck gives recorded praise, then the first word")
+        if t_index == 0:
+            # Tim 2026-10-23: right after the jump back the card must not wait for the praise.
+            for _ in tw[1:]:
+                page.click("#nextBtn")
+            n, a = calls(page), audios(page)
+            page.click("#nextBtn")  # wrap again
+            page.wait_for_timeout(100)
+            page.click("#nextBtn")  # the child taps on at once
+            run.check(page.inner_text("#progress").replace(" ", "") == f"2/{len(tw)}" and last_call(page)["text"] == tw[1]["english"],
+                      f"[{name}] tapping Next right after the jump back moves on and speaks '{tw[1]['english']}' at once")
+            page.wait_for_timeout(900)
+            run.check(not zh_said(page, a, "cards.done") and last_call(page)["text"] == tw[1]["english"],
+                      f"[{name}] ...and the cut-off praise does not play afterwards")
+            page.click("#prevBtn")
         a = audios(page)
         page.click('#cards [data-go="themes"]')
         page.wait_for_selector("#themes:not([hidden])")

@@ -29,6 +29,7 @@
   }
 
   function show(id) {
+    cancelDone();
     document.querySelectorAll('.screen').forEach(function (s) { s.hidden = s.id !== id; });
     if (id !== 'play') Games.stop();
     if (id !== 'cards') Speech.stop();
@@ -233,6 +234,12 @@
     }
   }
 
+  // The deck-finished praise waits for the star jingle (0.76s; its last note
+  // is fading by then) so the two do not cover each other.
+  var DONE_DELAY = 450;
+  var doneTimer = null;
+  function cancelDone() { clearTimeout(doneTimer); doneTimer = null; }
+
   function move(delta) {
     var n = state.list.length;
     var next = state.i + delta;
@@ -240,15 +247,26 @@
     if (next >= n) {
       // Finished the deck (word, phrase or review cards): a cheer and praise,
       // then start again. No stars: Tim (phase 9) keeps them for games.
+      // Tim (2026-10-23, iPad): the praise was hard to hear under the star
+      // jingle, and the first card had to wait for it. So it starts as the
+      // jingle ends, and any tap on the card (next, back, picture, speaker)
+      // or leaving the screen cuts it off and plays the new sound right away.
       next = 0;
       state.i = next;
       renderCard(delta);
+      Speech.stop();
       Fx.sound('star');
       Fx.move($('#picImg'), 'cheer');
-      Speech.zh('cards.done');
-      speakCurrent(true);
+      cancelDone();
+      doneTimer = setTimeout(function () {
+        doneTimer = null;
+        if ($('#cards').hidden) return;
+        Speech.zh('cards.done');
+        speakCurrent(true);
+      }, DONE_DELAY);
       return;
     }
+    cancelDone();
     state.i = next;
     renderCard(delta);
     speakCurrent();
@@ -257,6 +275,7 @@
   function speakCurrent(queue) {
     var w = state.list[state.i];
     if (!w) return;
+    if (queue !== true) cancelDone();
     if (state.deck !== 'phrases') { Speech.play(w, { queue: queue === true }); return; }
     var spans = $('#wordEn').children;
     var light = function (i) { Array.prototype.forEach.call(spans, function (s, k) { s.classList.toggle('lit', k === i); }); };

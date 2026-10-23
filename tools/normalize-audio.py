@@ -26,6 +26,19 @@ TARGET = -16.0      # LUFS: common for speech on phones and tablets (Apple, AES 
 PEAK_MAX = -1.5     # dBTP after encoding
 LIMIT = -2.5        # dBTP the limiter aims for; mp3 encoding can add up to ~1 dB
 TOLERANCE = 1.0     # LU allowed around the target by --check
+# Lines played differently from the rest. cards.done (Tim 2026-10-23, iPad:
+# "too quiet, and too long to wait after the jump back"): it follows the star
+# jingle and comes just before the device-read English word, so it gets +3 LU,
+# its long sentence pauses (~1 s) are cut to ~0.4 s and the silent tail to ~0.1 s.
+OVERRIDES = {"cards.done": {"lufs": -13.0, "trim": True}}
+TRIM = ("silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.05:"
+        "stop_periods=-1:stop_duration=0.25:stop_threshold=-45dB:stop_silence=0.15,"
+        # the tail too: the first English word follows right after
+        "areverse,silenceremove=start_periods=1:start_threshold=-45dB:start_silence=0.08,areverse")
+
+
+def target_for(key, base):
+    return OVERRIDES.get(key, {}).get("lufs", base)
 
 
 def measure(path):
@@ -48,9 +61,9 @@ def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
 
 
-def encode(src, dst, gain, limit):
-    """src -> dst with gain (dB); a limiter at LIMIT dBTP when asked."""
-    chain = f"volume={gain:.2f}dB"
+def encode(src, dst, gain, limit, trim=False):
+    """src -> dst with gain (dB); a limiter at LIMIT dBTP when asked; long pauses cut when trim."""
+    chain = (TRIM + "," if trim else "") + f"volume={gain:.2f}dB"
     if limit:
         # 4x oversampled so the limiter catches peaks between samples (true peak).
         chain += f",aresample=96000,alimiter=limit={10 ** (LIMIT / 20):.4f}:level=disabled:attack=2:release=40,aresample=24000"
@@ -61,20 +74,25 @@ def encode(src, dst, gain, limit):
 def normalize(key, target):
     """Make audio/zh/<key>.mp3 from the original; returns the manifest fields."""
     src = SRC / f"{key}.mp3"
+    target = target_for(key, target)
+    trim = OVERRIDES.get(key, {}).get("trim", False)
     lufs, tp, _ = measure(src)
     gain = target - lufs
     limit = tp + gain > LIMIT
     dst = OUT / f"{key}.mp3"
     with tempfile.TemporaryDirectory() as tmp:
         out = pathlib.Path(tmp) / "out.mp3"
-        encode(src, out, gain, limit)
+        encode(src, out, gain, limit, trim)
         got, peak, _ = measure(out)
         if abs(got - target) > 0.3:  # the limiter took some loudness: once more, a little louder
             gain += target - got
-            encode(src, out, gain, limit)
+            encode(src, out, gain, limit, trim)
             got, peak, _ = measure(out)
         dst.write_bytes(out.read_bytes())
-    return {"src": sha(src), "gain_db": round(gain, 2), "limited": limit, "lufs": got, "tp": peak, "target": target}
+    rec = {"src": sha(src), "gain_db": round(gain, 2), "limited": limit, "lufs": got, "tp": peak, "target": target}
+    if trim:
+        rec["trimmed"] = True
+    return rec
 
 
 def check(manifest, keys, target):
@@ -82,6 +100,7 @@ def check(manifest, keys, target):
     bad = []
     for key in keys:
         src, out, rec = SRC / f"{key}.mp3", OUT / f"{key}.mp3", manifest.get(key, {})
+        want = target_for(key, target)
         if not src.is_file():
             bad.append(f"{key}: original audio-src/zh/{key}.mp3 missing")
             continue
@@ -90,11 +109,11 @@ def check(manifest, keys, target):
             continue
         if rec.get("src") != sha(src):
             bad.append(f"{key}: the original changed since it was normalized; run tools/normalize-audio.py")
-        if rec.get("target") != target:
-            bad.append(f"{key}: made for {rec.get('target')} LUFS, not {target}; run tools/normalize-audio.py")
+        if rec.get("target") != want:
+            bad.append(f"{key}: made for {rec.get('target')} LUFS, not {want}; run tools/normalize-audio.py")
         lufs, tp, _ = measure(out)
-        if abs(lufs - target) > TOLERANCE:
-            bad.append(f"{key}: {lufs:.1f} LUFS (target {target:g} ±{TOLERANCE:g})")
+        if abs(lufs - want) > TOLERANCE:
+            bad.append(f"{key}: {lufs:.1f} LUFS (target {want:g} ±{TOLERANCE:g})")
         if tp > PEAK_MAX:
             bad.append(f"{key}: true peak {tp:.1f} dBTP (max {PEAK_MAX:g})")
     return bad
@@ -120,13 +139,14 @@ def main(argv=None):
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8")) if MANIFEST.exists() else {}
     keys = args.keys or sorted(p.stem for p in SRC.glob("*.mp3"))
     # Default target: what the files were made for (so --check and re-runs agree), else TARGET.
-    targets = {r.get("target") for r in manifest.values() if r.get("target") is not None}
+    targets = {r.get("target") for k, r in manifest.items() if r.get("target") is not None and k not in OVERRIDES}
     target = args.target if args.target is not None else (targets.pop() if len(targets) == 1 else TARGET)
+    OVERRIDE_TEXT = ", ".join(f"{k} {v['lufs']:g}" for k, v in OVERRIDES.items())
     if args.check:
         bad = check(manifest, sorted(manifest) if not args.keys else keys, target)
         if args.table:
             table(manifest, sorted(manifest), args.table)
-        print("\n".join(bad) if bad else f"OK: {len(manifest)} Chinese lines at {target:g} ±{TOLERANCE:g} LUFS, true peak <= {PEAK_MAX:g} dBTP, made from audio-src/zh/")
+        print("\n".join(bad) if bad else f"OK: {len(manifest)} Chinese lines at {target:g} ±{TOLERANCE:g} LUFS (overrides: {OVERRIDE_TEXT}), true peak <= {PEAK_MAX:g} dBTP, made from audio-src/zh/")
         return 1 if bad else 0
     made = 0
     for key in keys:
@@ -135,7 +155,7 @@ def main(argv=None):
             print(f"skip {key}: not in audio/zh/manifest.json (run tools/gen-voice.py)")
             continue
         src = SRC / f"{key}.mp3"
-        if not args.force and rec.get("src") == sha(src) and rec.get("target") == target and (OUT / f"{key}.mp3").is_file():
+        if not args.force and rec.get("src") == sha(src) and rec.get("target") == target_for(key, target) and (OUT / f"{key}.mp3").is_file():
             continue
         rec.update(normalize(key, target))
         made += 1

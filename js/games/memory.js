@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var PAIRS = 6;
+  var PAIRS = Quiz.ROUNDS.memoryPairs;
 
   Games.register({
     id: 'memory',

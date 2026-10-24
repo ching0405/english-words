@@ -3,9 +3,15 @@
 (function () {
   'use strict';
 
-  var BOARDS = 2, PER_BOARD = 3;
+  var BOARDS = Quiz.ROUNDS.matchBoards, PER_BOARD = Quiz.ROUNDS.matchPerBoard;
   var COLORS = ['#ff5a5f', '#4fb0ff', '#5ccf6a', '#9b6bff'];
   var SVGNS = 'http://www.w3.org/2000/svg';
+
+  function chunks(list, n) {
+    var out = [];
+    for (var i = 0; i < list.length; i += n) out.push(list.slice(i, i + n));
+    return out;
+  }
 
   Games.register({
     id: 'match',
@@ -17,7 +23,7 @@
     start: function (api) {
       // Review rounds bring their own words: boards of three in order.
       var boards = api.targets
-        ? [api.targets.slice(0, PER_BOARD), api.targets.slice(PER_BOARD, 2 * PER_BOARD)].filter(function (x) { return x.length >= 2; })
+        ? chunks(api.targets.slice(0, BOARDS * PER_BOARD), PER_BOARD).filter(function (x) { return x.length >= 2; })
         : Quiz.boards({ words: api.words, themeId: api.themeId, boards: BOARDS, perBoard: PER_BOARD, rand: api.rand });
       var total = boards.reduce(function (n, x) { return n + x.length; }, 0);
       api.dots(total);
@@ -124,7 +130,7 @@
           if (lines.length < boards[b].length) return;
           b++;
           if (b < boards.length) { board(); api.zh('match.next_board'); return; }
-          api.askAgain(missedWords, done, function () { api.finish(1, 3); });
+          api.askAgain(missedWords, done, function () { api.finish(2, 5); });
         });
       }
 

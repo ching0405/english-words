@@ -37,7 +37,7 @@ test('with fewer words than questions, no word comes twice in a row', () => {
 });
 
 test('every question has the target once plus distinct wrong choices', () => {
-  for (const themeId of [null, 'animals', 'halloween']) {
+  for (const themeId of [null, 'animals', 'halloween', 'numbers']) {
     for (let seed = 0; seed < 200; seed++) {
       for (const q of Quiz.questions({ words: WORDS, themeId, count: 6, choices: 4, rand: Quiz.rng(seed) })) {
         assert.equal(q.options.length, 4);
@@ -142,5 +142,35 @@ test('words sharing one picture never meet in a question or on a board', () => {
     Quiz.questionsFor([twin], words, 4, rand).forEach(q => assert.equal(new Set(pictures(q.options)).size, 4));
     const board = Quiz.pick({ words, themeId: 'animals', count: 6, rand });
     assert.equal(new Set(pictures(board)).size, board.length, `seed ${seed}: ${ids(board)}`);
+  }
+});
+
+test('round sizes (Tim 2026-10-24): every game long enough, small pools repeat but never twice in a row', () => {
+  const R = Quiz.ROUNDS;
+  assert.deepEqual(R, { listen: 10, matchBoards: 3, matchPerBoard: 3, memoryPairs: 6, review: 9,
+                        phraseListen: 10, phraseOrder: 6, phraseReview: 6 });
+  const PHRASES = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/phrases.json'), 'utf8'));
+  const P = require('../js/phrases.js');
+  for (let seed = 1; seed <= 50; seed++) {
+    for (const themeId of [null, 'animals', 'halloween', 'numbers']) {
+      const qs = Quiz.questions({ words: WORDS, themeId, count: R.listen, choices: 4, rand: Quiz.rng(seed) });
+      assert.equal(qs.length, R.listen);
+      qs.forEach((q, i) => { if (i) assert.notEqual(q.target.id, qs[i - 1].target.id); });
+      const pool = Quiz.pool(WORDS, themeId);
+      // Every word of the theme comes up before any comes up a second time.
+      assert.equal(new Set(qs.slice(0, Math.min(pool.length, R.listen)).map(q => q.target.id)).size, Math.min(pool.length, R.listen));
+      const boards = Quiz.boards({ words: WORDS, themeId, boards: R.matchBoards, perBoard: R.matchPerBoard, rand: Quiz.rng(seed) });
+      assert.equal(boards.length, R.matchBoards);
+      boards.forEach(b => { assert.equal(b.length, R.matchPerBoard); assert.equal(new Set(ids(b)).size, b.length); });
+    }
+    for (const [list, n] of [[PHRASES, R.phraseListen], [P.orderable(PHRASES), R.phraseOrder]]) {
+      const round = Quiz.targets(list, n, Quiz.rng(seed));
+      assert.equal(round.length, n);
+      round.forEach((p, i) => { if (i) assert.notEqual(p.id, round[i - 1].id); });
+      const counts = {};
+      round.forEach(p => { counts[p.id] = (counts[p.id] || 0) + 1; });
+      assert.equal(Object.keys(counts).length, Math.min(list.length, n), 'every phrase comes up');
+      assert.ok(Math.max(...Object.values(counts)) - Math.min(...Object.values(counts)) <= 1, 'evenly spread');
+    }
   }
 });

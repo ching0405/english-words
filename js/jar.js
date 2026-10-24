@@ -11,21 +11,24 @@
 
   var SVGNS = 'http://www.w3.org/2000/svg';
   var SHELF_MAX = 4;          // full jars drawn on the shelf; more show a "+"
-  // Stars lie in a heap, not a grid (Tim, phase 9): layers of 4, 3, 3, 2 from
-  // the bottom, each star nudged, turned and sized a little differently, in
-  // one of a few golds. A fixed seed: the same heap on every device and every
-  // redraw, so a star never jumps when another one lands.
+  // Stars lie in a heap, not a grid (Tim, phase 9): layers of 5 and 4 from
+  // the bottom up to the neck (30 stars, Tim 2026-10-24: "裝多一點"), each
+  // star nudged, turned and sized a little differently, in one of a few golds.
+  // A fixed seed: the same heap on every device and every redraw, so a star
+  // never jumps when another one lands. PILE.length must equal
+  // Progress.lib.JAR_SIZE (tools/test_progress.cjs checks it).
   var GOLDS = ['#ffd43b', '#ffc933', '#ffe066', '#ffbf3f'];
+  var FIVE = [19, 34.5, 50, 65.5, 81], FOUR = [26.5, 42, 58, 73.5], THREE = [34.5, 50, 65.5];
   var PILE = (function () {
     var seed = 9, rand = function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
-    var layers = [[106, [21, 40, 59, 78]], [90, [31, 50, 69]], [75, [28, 48, 68]], [60, [36, 58]]];
+    var layers = [[106, FIVE], [95.5, FOUR], [85, FIVE], [74.5, FOUR], [64, FIVE], [53.5, FOUR], [43, THREE]];
     var out = [];
     layers.forEach(function (layer) {
       // Within a layer stars land in a mixed order, not left to right.
       var xs = layer[1].slice().sort(function () { return rand() - 0.5; });
       xs.forEach(function (x) {
-        out.push({ x: x + (rand() - 0.5) * 6, y: layer[0] + (rand() - 0.5) * 5, r: (rand() - 0.5) * 56,
-                   s: 21 + rand() * 5, c: GOLDS[Math.floor(rand() * GOLDS.length)] });
+        out.push({ x: x + (rand() - 0.5) * 4, y: layer[0] + (rand() - 0.5) * 4, r: (rand() - 0.5) * 56,
+                   s: 17 + rand() * 3, c: GOLDS[Math.floor(rand() * GOLDS.length)] });
       });
     });
     return out;
@@ -54,7 +57,7 @@
       if (fresh !== undefined && i >= fresh) drop.style.animationDelay = ((i - fresh) * 0.12) + 's';
       var g = el('g', { transform: 'translate(' + s.x.toFixed(1) + ' ' + s.y.toFixed(1) + ') rotate(' + s.r.toFixed(0) + ')' });
       g.appendChild(el('use', { href: '#i-star', x: -s.s / 2, y: -s.s / 2, width: s.s, height: s.s, 'class': 'jar-star', style: 'fill:' + s.c }));
-      g.appendChild(el('circle', { cx: -2.5, cy: -3, r: 1.6, fill: '#fff', opacity: 0.85 }));   // a little shine
+      g.appendChild(el('circle', { cx: -2, cy: -2.4, r: 1.3, fill: '#fff', opacity: 0.85 }));   // a little shine
       drop.appendChild(g);
       svg.appendChild(drop);
     }
@@ -151,5 +154,5 @@
     return res;
   }
 
-  window.Jar = { render: render, renderAll: renderAll, drop: drop };
+  window.Jar = { render: render, renderAll: renderAll, drop: drop, PILE_SIZE: PILE.length };
 })();

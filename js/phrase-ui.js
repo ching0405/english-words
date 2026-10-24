@@ -2,11 +2,19 @@
 // stars belong to Games. Browsing the phrases is the #cards deck (js/app.js).
 (function () {
   'use strict';
+
+  // A word card read on its own. iPad voices read a lone "I" as the letter
+  // ("capital I") or a Roman numeral; "eye" sounds exactly like the pronoun.
+  var SOLO_SAY = { i: 'eye' };
+  function soloWord(word) {
+    var bare = String(word).replace(/[?.!,]$/, '');
+    return SOLO_SAY[bare.toLowerCase()] || bare;
+  }
   var phrases = [];
   // Order-game tokens get these colours dealt afresh every question, so a
   // colour never tells which word comes first: only listening does.
   var colors = ['#4fb0ff', '#ff9f43', '#ff8fc0', '#9b6bff'];
-  var REVIEW_SIZE = 4;
+  var REVIEW_SIZE = Quiz.ROUNDS.phraseReview;
 
   function zhOn() { return document.body.classList.contains('show-zh'); }
 
@@ -15,8 +23,10 @@
       id: 'phrase-' + mode,
       intro: 'phrases.' + mode,
       start: function (api) {
-        // Review keeps its priority order (due, then missed); the rest is shuffled.
-        var list = mode === 'review' ? targets : PhraseQuiz.round(targets || phrases, Math.random);
+        // Review keeps its priority order (due, then missed). The games deal
+        // their phrases round and round, shuffled, never one twice in a row.
+        var count = mode === 'order' ? Quiz.ROUNDS.phraseOrder : Quiz.ROUNDS.phraseListen;
+        var list = mode === 'review' ? targets : Quiz.targets(targets || phrases, count, Math.random);
         var q = 0;
         api.dots(list.length);
 
@@ -203,7 +213,7 @@
                 if (busy) { Fx.move(button, 'wiggle'); return; }
                 if (selected === item) { place(item); return; }
                 select(item);
-                Speech.play({ english: item.word.replace(/[?.!]$/, '') });
+                Speech.play({ english: soloWord(item.word) });
               };
             });
             mark();

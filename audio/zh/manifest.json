@@ -399,5 +399,25 @@
     "lufs": -16.0,
     "tp": -2.8,
     "target": -16.0
+  },
+  "theme.numbers": {
+    "text": "數字",
+    "hash": "490017e61e39a04a",
+    "src": "157240605c9e126e",
+    "gain_db": 4.1,
+    "limited": false,
+    "lufs": -16.0,
+    "tp": -3.6,
+    "target": -16.0
+  },
+  "theme.colors": {
+    "text": "顏色",
+    "hash": "073a14293a878d63",
+    "src": "38f3fb829a05f0e5",
+    "gain_db": 3.6,
+    "limited": true,
+    "lufs": -16.2,
+    "tp": -2.7,
+    "target": -16.0
   }
 }

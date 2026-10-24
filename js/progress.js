@@ -34,7 +34,7 @@
   var INTERVALS = [1, 1, 2, 4, 8, 16];
   var MAX_BOX = INTERVALS.length - 1;
   var KNOWN_BOX = 2;              // box 2+ counts as "known" for theme stars
-  var JAR_SIZE = 12;              // stars that fill one star jar
+  var JAR_SIZE = 30;              // stars that fill one star jar (12 until 2026-10-24)
   var REVIEW_MODES = ['listen', 'match', 'memory', 'cards'];
 
   // Older save formats -> next version.

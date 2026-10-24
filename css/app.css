@@ -166,6 +166,38 @@ h1 .en { display: block; font-size: clamp(26px, 6.4vw, 64px); color: var(--sky-i
   .theme-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); width: 100%; max-width: calc(3 * 380px + 2 * var(--gutter)); margin: 0 auto; padding-top: 4vh; }
 }
 
+/* Word themes (#themeGrid): today's review and all four themes on one iPad
+   screen, no scrolling (four themes since 2026-10-24). Upright: review across
+   the top, themes 2 x 2. Sideways: five columns. The rows share the height
+   left under the Games button and each picture takes what its words and
+   stars leave; text scales with the card width (container units). */
+#themeGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; grid-auto-rows: minmax(220px, 1fr);
+  align-content: stretch; padding-top: 16px;
+}
+#themeGrid .theme-card:not(.review-card) { container-type: inline-size; justify-content: center; min-height: 0; padding: 10px 8px 14px; }
+#themeGrid .theme-card:not(.review-card) img {
+  flex: 0 1 auto; height: min(100cqw, 300px); min-height: 64px; width: 100%; aspect-ratio: auto; object-fit: contain; padding: 5%;
+  /* The pale disc is the largest circle that fits, whatever the box's shape. */
+  background: radial-gradient(circle closest-side, #ffffffb3 99%, transparent 100%); border-radius: 0; margin-bottom: 4px;
+}
+#themeGrid .theme-zh { font-size: min(44px, 24cqw, 3.4vh); line-height: 1.2; }
+#themeGrid .theme-en { font-size: min(30px, 16cqw, 2.4vh); line-height: 1.2; }
+#themeGrid .theme-card:not(.review-card) .theme-stars { margin-top: 4px; }
+#themeGrid .theme-card:not(.review-card) .theme-star { width: min(40px, 18cqw, 3vh); height: min(40px, 18cqw, 3vh); }
+#themeGrid .review-card { gap: 2px clamp(12px, 3vw, 32px); }
+#themeGrid .review-pic { width: min(30vw, 11vh, 150px); height: min(30vw, 11vh, 150px); }
+#themeGrid .review-card { padding-top: 10px; padding-bottom: 12px; }
+@media (orientation: landscape) and (min-aspect-ratio: 5/4) {
+  #themeGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: minmax(240px, 1fr); max-width: none; }
+  #themeGrid .review-card { container-type: inline-size; justify-content: center; min-height: 0; padding: 10px 8px 14px; }
+  #themeGrid .review-pic { flex: 0 1 auto; width: 100%; height: min(100cqw, 260px); min-height: 64px; }
+  #themeGrid .theme-zh { font-size: min(44px, 24cqw, 5.4vh); }
+  #themeGrid .theme-en { font-size: min(30px, 16cqw, 3.8vh); }
+  #themeGrid .theme-card:not(.review-card) .theme-star { width: min(40px, 18cqw, 4.6vh); height: min(40px, 18cqw, 4.6vh); }
+  #themeGrid .due-pics img { width: min(52px, 24cqw); height: min(52px, 24cqw); }
+}
+
 /* ---------- cards */
 #cards {
   display: grid; gap: 12px;

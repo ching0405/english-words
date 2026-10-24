@@ -217,16 +217,19 @@ test('theme stars only go up, even when a known word is missed', () => {
 
 test('star jar: counts stars, fills at JAR_SIZE, starts a new jar, survives reload', () => {
   const { p, store, clock } = setup();
+  assert.equal(P.JAR_SIZE, 30, 'one jar holds 30 stars (10 full rounds; Tim 2026-10-24)');
   assert.deepEqual(p.jar(), { stars: 0, full: 0, size: P.JAR_SIZE });
   let res = p.addJarStars(3);
   assert.deepEqual(res.jar, { stars: 3, full: 0 });
   assert.equal(res.filled, false);
-  for (let i = 0; i < 3; i++) p.addJarStars(3);  // 12
+  for (let i = 0; i < 8; i++) assert.equal(p.addJarStars(3).filled, false);  // 27: not full yet
+  res = p.addJarStars(3);                          // 30
+  assert.equal(res.filled, true);
   res = p.jar();
   assert.deepEqual([res.stars, res.full], [0, 1]);
   res = p.addJarStars(2);
   assert.equal(res.filled, false);
-  res = p.addJarStars(P.JAR_SIZE - 1);           // 2 + 11 = 13: second jar full, 1 left over
+  res = p.addJarStars(P.JAR_SIZE - 1);           // 2 + 29 = 31: second jar full, 1 left over
   assert.equal(res.filled, true);
   assert.deepEqual(res.jar, { stars: 1, full: 2 });
   const again = P.create(store, () => clock.t);
@@ -234,8 +237,30 @@ test('star jar: counts stars, fills at JAR_SIZE, starts a new jar, survives relo
   assert.deepEqual(again.jar(), { stars: 1, full: 2, size: P.JAR_SIZE });
 });
 
+test('star jar: saves from the 12-star jar keep every star and every full jar', () => {
+  for (const [jar, want] of [[{ stars: 11, full: 0 }, { stars: 11, full: 0 }], [{ stars: 0, full: 3 }, { stars: 0, full: 3 }],
+                             [{ stars: 7, full: 2 }, { stars: 7, full: 2 }]]) {
+    const raw = JSON.stringify({ version: 3, words: { goat: { seen: 2, right: 1, wrong: 0, last: T0, box: 1, due: P.dayAfter(T0, 1) } },
+                                 best: { animals: 2 }, jar, reviewTurn: 2 });
+    const { p, store } = setup({ [P.KEY]: raw });
+    assert.deepEqual(p.jar(), Object.assign({ size: P.JAR_SIZE }, want), JSON.stringify(jar));
+    assert.equal(p.get('goat').right, 1);
+    assert.equal(store.getItem(P.BROKEN_KEY), null, 'an old jar is not a broken save');
+    const res = p.addJarStars(3);
+    assert.deepEqual(res.jar, { stars: want.stars + 3, full: want.full }, 'stars keep adding up in the bigger jar');
+  }
+});
+
+test('star jar: the heap drawing has exactly one place per star', () => {
+  const src = fs.readFileSync(path.join(__dirname, '..', 'js/jar.js'), 'utf8');
+  const layers = src.match(/var layers = \[(.*)\];/)[1];
+  const rows = { FIVE: 5, FOUR: 4, THREE: 3 };
+  const total = layers.match(/FIVE|FOUR|THREE/g).reduce((a, k) => a + rows[k], 0);
+  assert.equal(total, P.JAR_SIZE);
+});
+
 test('star jar: broken jar fields are repaired, the rest of the save kept', () => {
-  for (const jar of ['x', null, { stars: 'many', full: -2 }, { stars: 30, full: 1 }]) {
+  for (const jar of ['x', null, { stars: 'many', full: -2 }, { stars: 75, full: 1 }]) {
     const raw = JSON.stringify({ version: 3, words: { goat: { seen: 2, right: 0, wrong: 0, last: T0, box: 0, due: P.dayAfter(T0, 1) } }, best: { animals: 1 }, jar, reviewTurn: 1 });
     const { p, store } = setup({ [P.KEY]: raw });
     const j = p.jar();
@@ -244,8 +269,8 @@ test('star jar: broken jar fields are repaired, the rest of the save kept', () =
     assert.equal(p.get('goat').seen, 2);
     assert.equal(store.getItem(P.BROKEN_KEY), null);
   }
-  const { p } = setup({ [P.KEY]: JSON.stringify({ version: 3, words: {}, jar: { stars: 30, full: 1 } }) });
-  assert.deepEqual(p.jar(), { stars: 6, full: 3, size: P.JAR_SIZE }, 'overflowing stars become full jars');
+  const { p } = setup({ [P.KEY]: JSON.stringify({ version: 3, words: {}, jar: { stars: 70, full: 1 } }) });
+  assert.deepEqual(p.jar(), { stars: 10, full: 3, size: P.JAR_SIZE }, 'overflowing stars become full jars');
 });
 
 test('review mode takes turns: listen, match, memory, cards, listen…', () => {

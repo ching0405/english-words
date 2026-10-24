@@ -5,6 +5,19 @@
 (function (root) {
   'use strict';
 
+  // Questions / boards per round, one place for every game (Tim 2026-10-24:
+  // "有些關卡的關卡數也太少"). Small pools repeat items, never twice in a row.
+  var ROUNDS = {
+    listen: 10,            // 聽音找圖 questions (was 6)
+    matchBoards: 3,        // 連連看 boards of matchPerBoard pairs (was 2: 6 pairs, now 9)
+    matchPerBoard: 3,
+    memoryPairs: 6,        // 翻牌記憶 pairs on the one board (12 cards, unchanged)
+    review: 9,             // today's word review (was 6)
+    phraseListen: 10,      // 聽句子找圖 (was 7: each phrase once)
+    phraseOrder: 6,        // 排句子 (was 3: each of the 3 orderable phrases twice; 9 = three times was too samey)
+    phraseReview: 6        // today's phrase review (was 4)
+  };
+
   // Small seeded random generator (mulberry32).
   function rng(seed) {
     var a = seed >>> 0;
@@ -128,7 +141,7 @@
     return 1;
   }
 
-  var Quiz = { rng: rng, shuffle: shuffle, pool: pool, targets: targets, distractors: distractors, questions: questions, questionsFor: questionsFor, pick: pick, boards: boards, stars: stars };
+  var Quiz = { ROUNDS: ROUNDS, rng: rng, shuffle: shuffle, pool: pool, targets: targets, distractors: distractors, questions: questions, questionsFor: questionsFor, pick: pick, boards: boards, stars: stars };
   if (typeof module !== 'undefined' && module.exports) module.exports = Quiz;
   else root.Quiz = Quiz;
 })(this);

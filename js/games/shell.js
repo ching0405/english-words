@@ -301,7 +301,7 @@
   // Today's review: due words first (then the least known), so missed words
   // come back. Nothing due: say so kindly and practise the words that need it
   // most. The play mode takes turns: listen, match, memory, cards.
-  var REVIEW_SIZE = 6;
+  var REVIEW_SIZE = Quiz.ROUNDS.review;
   function review() {
     var set = Progress.reviewSet(state.words, REVIEW_SIZE);
     var intro = set.due.length ? 'review.intro' : 'review.none';

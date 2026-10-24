@@ -11,7 +11,7 @@
     intro: 'intro.listen',
     start: function (api) {
       var qs = api.targets ? Quiz.questionsFor(api.targets, api.words, 4, api.rand)
-        : Quiz.questions({ words: api.words, themeId: api.themeId, count: 6, choices: 4, rand: api.rand });
+        : Quiz.questions({ words: api.words, themeId: api.themeId, count: Quiz.ROUNDS.listen, choices: 4, rand: api.rand });
       var grid = api.el('div', 'choices');
       api.stage.appendChild(grid);
       api.dots(qs.length);
@@ -62,7 +62,7 @@
             if (again.length === 1 && again[0] === last) {
               bridge = rightFirst.filter(function (w) { return w !== last; }).pop() || null;
             }
-            api.askAgain(again, qs.length, function () { api.finish(1, 3); }, { bridge: bridge });
+            api.askAgain(again, qs.length, function () { api.finish(2, 5); }, { bridge: bridge });
           });
         } else {
           b.classList.add('is-wrong'); // fades so the child can try the others

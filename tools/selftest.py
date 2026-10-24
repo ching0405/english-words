@@ -277,7 +277,14 @@ def flow(run, browser, base, name, opts, words, themes):
     page.wait_for_selector("#themes:not([hidden])")
     run.check(page.locator(".theme-card:not(.review-card)").count() == len(themes) and page.locator(".review-card").count() == 1, f"[{name}] {len(themes)} theme cards plus today's review")
     lay("themes")
-    shot(page, f"{name}-themes")
+    if name.startswith("ipad"):
+        # Every theme and today's review fit on one iPad screen, no scrolling (4 themes since 2026-10-24).
+        page.wait_for_timeout(500)  # cards pop in
+        out = page.evaluate("""() => [...document.querySelectorAll('#themeGrid .theme-card')].filter(c => {
+            const r = c.getBoundingClientRect(), img = c.querySelector('img, .review-pic').getBoundingClientRect();
+            return r.top < 0 || r.bottom > innerHeight || r.left < 0 || r.right > innerWidth || img.height < 120;
+          }).map(c => c.dataset.theme)""")
+        run.check(not out, f"[{name}] all theme cards on screen with a picture of 120px or more {out}")
     page.wait_for_timeout(600)  # voices arrive at 800ms
 
     for t_index, th in enumerate(themes):
@@ -615,8 +622,11 @@ def pick_game(run, page, name, game, by_english, shots, selector, tap):
 
 def play_listen(run, page, name, label, shots, folder, selector=".choices .pick", tap=None):
     """Play a listen round from its first question: miss Q1 once, then all right.
-    The missed word must come back once at the end (7 questions). Returns asked ids."""
+    The missed word must come back once at the end (N + 1 questions), unless the
+    round already asks it again later (small themes repeat words). Returns asked ids."""
     tap = tap or (lambda sel: page.click(sel))
+    page.wait_for_function("() => document.querySelectorAll('#dots .dot').length > 0")
+    N = page.locator("#dots .dot").count()   # questions in the round (Quiz.ROUNDS.listen, or the review size)
     asked = []
     q = 0
     a0 = audios(page)
@@ -647,20 +657,20 @@ def play_listen(run, page, name, label, shots, folder, selector=".choices .pick"
                 shot(page, f"{name}-{label}-right", folder)
         # Fixed file name every run: the ask-again question, or (when the missed
         # word already came back as Q6) that second try.
-        if shots and (q == 6 or (q == 5 and asked[5] == asked[0])):
+        if shots and (q == N or (q == N - 1 and asked[0] in asked[1:N])):
             shot(page, f"{name}-{label}-asked-again", folder)
         q += 1
         wait_q(page, q)
     stars = wait_result(page)
     # Q1 was missed. It comes back once at the end, unless it already came back
-    # as question 6 (small themes repeat words) — then that was its second try.
-    came_back_as_q6 = len(asked) >= 6 and asked[5] == asked[0]
-    want = 6 if came_back_as_q6 else 7
-    run.check(len(asked) == want and (came_back_as_q6 or asked[6] == asked[0]) and page.locator("#dots .dot").count() == want,
+    # later in the round (small themes repeat words) — then that was its second try.
+    came_back = asked[0] in asked[1:N]
+    want = N if came_back else N + 1
+    run.check(len(asked) == want and (came_back or asked[N] == asked[0]) and page.locator("#dots .dot").count() == want,
               f"[{name}/{label}] the missed word gets one more try at the end: {asked}")
     run.check(all(asked[i] != asked[i - 1] for i in range(1, len(asked))), f"[{name}/{label}] never the same word twice in a row {asked}")
     told = ask_again_count(page, a0)
-    run.check(told == (want - 6), f"[{name}/{label}] recorded 'that word again' line before the ask-again question: played {told}x")
+    run.check(told == (want - N), f"[{name}/{label}] recorded 'that word again' line before the ask-again question: played {told}x")
     run.check(stars == 3, f"[{name}/{label}] one mistake -> {stars} stars")
     return asked
 
@@ -738,6 +748,7 @@ def play_match(run, page, name, label, shots, folder):
     question. Returns the boards (word ids)."""
     page.wait_for_timeout(300)
     run.check(not page.evaluate(NO_TEXT, ".match-say, .match-pic"), f"[{name}/{label}] board has no text")
+    pairs = page.locator("#dots .dot").count()   # pairs in the round, over all boards
     boards, missed, done, again = [], None, 0, []
     a0 = audios(page)
     since = calls(page)
@@ -799,7 +810,8 @@ def play_match(run, page, name, label, shots, folder):
                           f"[{name}/{label}] board {len(boards)}: {k + 1} line(s) drawn")
             page.wait_for_timeout(250)
     stars = wait_result(page)
-    run.check(len(boards) == 2 and again == [missed] and page.locator("#dots .dot").count() == done + 1,
+    want_boards = page.evaluate("() => Quiz.ROUNDS.matchBoards")
+    run.check(len(boards) == want_boards and sum(map(len, boards)) == pairs == done and again == [missed] and page.locator("#dots .dot").count() == done + 1,
               f"[{name}/{label}] no extra board; the missed word ({missed}) asked once more as one question {again}")
     told = ask_again_count(page, a0)
     run.check(told == 1, f"[{name}/{label}] recorded 'that word again' line before the ask-again question: played {told}x")
@@ -1011,7 +1023,7 @@ def back_to_themes(page):
 
 def start_review(run, page, name, mode, want_intro):
     """Tap today's review; check the mode and its spoken opening. Returns the review word ids."""
-    expected = page.evaluate("(words) => Progress.reviewSet(words, 6).list.map(w => w.id)", WORDS)
+    expected = page.evaluate("(words) => Progress.reviewSet(words, Quiz.ROUNDS.review).list.map(w => w.id)", WORDS)
     a = audios(page)
     SPEECH_MARK["n"] = calls(page)
     page.click(".review-card")
@@ -1135,12 +1147,13 @@ def progress_flow(run, browser, base, name, opts, words):
     # The review takes turns: match, memory, cards, listen — each on the review words.
     expected = start_review(run, page, name, "match", "review.intro")
     boards = play_match(run, page, name, "review-match", big or name == "ipad-landscape", QA3)
-    run.check(set(boards[0] + boards[1]) == set(expected), f"[{name}] match review uses the review words")
+    run.check(set(sum(boards, [])) == set(expected), f"[{name}] match review uses the review words")
     if name != "phone-portrait":
         shot(page, f"{name}-review-match-result", QA3)
     st = back_to_themes(page)
     expected = start_review(run, page, name, "memory", "review.intro")
-    run.check(set(page.eval_on_selector_all(".mcard", "els => els.map(e => e.dataset.word)")) == set(expected),
+    shown = set(page.eval_on_selector_all(".mcard", "els => els.map(e => e.dataset.word)"))
+    run.check(shown <= set(expected) and len(shown) == min(len(expected), page.evaluate("() => Quiz.ROUNDS.memoryPairs")),
               f"[{name}] memory review uses the review words")
     if big or name == "ipad-pro":
         shot(page, f"{name}-review-memory", QA3)
@@ -1161,12 +1174,13 @@ def progress_flow(run, browser, base, name, opts, words):
 
     # A nearly full jar: the next round fills it, it celebrates and a new jar starts.
     snap = json.loads(after["saved"])
-    snap["jar"] = {"stars": 11, "full": 0}
+    jar_size = page.evaluate("() => Progress.lib.JAR_SIZE")
+    snap["jar"] = {"stars": jar_size - 1, "full": 0}
     page.evaluate("(s) => localStorage.setItem('ew.progress', s)", json.dumps(snap))
     page.reload()
     page.wait_for_selector("#startBtn:not([disabled])")
     st = to_themes(page)
-    run.check(st["jarShown"] == [[11, 0]], f"[{name}] nearly full jar shown {st['jarShown']}")
+    run.check(st["jarShown"] == [[jar_size - 1, 0]], f"[{name}] nearly full jar shown {st['jarShown']}")
     if big:
         shot(page, f"{name}-themes-jar-nearly-full", QA3)
     a = audios(page)
@@ -1265,7 +1279,7 @@ def legacy_case(run, browser, base, name, opts):
     page.click("#startBtn", force=True)
     page.wait_for_selector("#themes:not([hidden])")
     themes = page.evaluate("() => [...document.querySelectorAll('#themeGrid .theme-card')].map(b => b.dataset.theme)")
-    run.check(themes == ["review", "animals", "halloween"], f"{tag} only built-in themes {themes}")
+    run.check(themes == ["review"] + [t["id"] for t in json.loads((ROOT / "data/themes.json").read_text())], f"{tag} only built-in themes {themes}")
     due = page.evaluate("() => [...document.querySelectorAll('.review-card .due-pics img')].map(i => i.dataset.word)")
     run.check(due == ["goat"], f"{tag} review shows only built-in due words {due}")
     page.click('.theme-card[data-theme="animals"]')
@@ -1289,20 +1303,21 @@ def jar_case(run, browser, base, name, opts):
     info = page.evaluate(r"""() => {
       const box = document.createElement('div'); box.className = 'jar-box result-jar'; document.body.appendChild(box);
       const read = () => [...box.querySelectorAll('.jar-main .jar-star-drop > g')].map(g => g.getAttribute('transform'));
-      Jar.render(box, {stars: 11, full: 0, size: 12}); const a = read();
-      Jar.render(box, {stars: 11, full: 0, size: 12}); const b = read();
+      const size = Progress.lib.JAR_SIZE;
+      Jar.render(box, {stars: size, full: 0, size}); const a = read();
+      Jar.render(box, {stars: size, full: 0, size}); const b = read();
       const glass = box.querySelector('.jar-glass').getBoundingClientRect();
       const inside = [...box.querySelectorAll('.jar-main .jar-star')].every(u => { const r = u.getBoundingClientRect();
         return r.left >= glass.left - 1 && r.right <= glass.right + 1 && r.top >= glass.top - 1 && r.bottom <= glass.bottom + 1; });
       const xy = a.map(t => t.match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1).map(Number));
       const rot = new Set(a.map(t => t.match(/rotate\(([-\d.]+)\)/)[1])).size;
       const ys = xy.map(p => p[1]), rows = new Set(ys.map(y => Math.round(y))).size;
-      Jar.render(box, {stars: 11, full: 0, size: 12}, 8);
+      Jar.render(box, {stars: 11, full: 0, size}, 8);
       const fresh = box.querySelectorAll('.jar-main .jar-star-new').length;
       box.remove();
-      return {n: a.length, same: JSON.stringify(a) === JSON.stringify(b), inside, rot, rows, fresh, lowFirst: ys[0] > ys[ys.length - 1]};
+      return {n: a.length, size, pile: Jar.PILE_SIZE, same: JSON.stringify(a) === JSON.stringify(b), inside, rot, rows, fresh, lowFirst: ys[0] > ys[ys.length - 1]};
     }""")
-    run.check(info["n"] == 11 and info["inside"], f"{tag} 11 stars, all inside the glass {info}")
+    run.check(info["n"] == info["size"] == info["pile"] and info["inside"], f"{tag} a full jar: every star has a place, all inside the glass {info}")
     run.check(info["same"], f"{tag} the heap is the same on every draw (a star never jumps)")
     run.check(info["rot"] >= 8 and info["rows"] >= 8 and info["lowFirst"], f"{tag} a heap from the bottom up, turned and placed unevenly, not a grid {info}")
     run.check(info["fresh"] == 3, f"{tag} only the round's new stars drop in ({info['fresh']} of 3)")
@@ -1310,7 +1325,7 @@ def jar_case(run, browser, base, name, opts):
     if not reduced:
         page.emulate_media(reduced_motion="reduce")
     still = page.evaluate("""() => { const box = document.createElement('div'); box.className = 'jar-box'; document.body.appendChild(box);
-      Jar.render(box, {stars: 5, full: 0, size: 12}, 3); const n = box.querySelector('svg').getAnimations({subtree: true}).length; box.remove(); return n; }""")
+      Jar.render(box, {stars: 5, full: 0, size: Progress.lib.JAR_SIZE}, 3); const n = box.querySelector('svg').getAnimations({subtree: true}).length; box.remove(); return n; }""")
     run.check(still == 0, f"{tag} reduced motion: no dropping or twinkling ({still} animations)")
     run.check(not errors, f"{tag} no errors {errors}")
     ctx.close()
@@ -1382,7 +1397,8 @@ def phrases_flow(run, browser, base, name, opts):
     shot(page,name+'-games',QA4)
     lookup={p['english']:p for p in phrases}
     multi=[p for p in phrases if len(p['english'].split())>1]
-    rounds={'listen':len(phrases),'order':len(multi),'review':4}
+    R=page.evaluate("() => Quiz.ROUNDS")
+    rounds={'listen':R['phraseListen'],'order':R['phraseOrder'],'review':min(R['phraseReview'],len(phrases))}
     missed=[]
     for mode in ('listen','order','review'):
         if mode=='review':
@@ -1443,6 +1459,7 @@ def phrases_flow(run, browser, base, name, opts):
                 run.check(page.evaluate("() => getComputedStyle(document.querySelector('.game-phrase-order .phrase-text')).visibility")=='hidden',f'[{name}] order: the written sentence is hidden until it is built')
                 run.check(page.locator('.phrase-bank .hint, .phrase-slots .next.lit').count()==0 and not page.locator('.phrase-bank').inner_text().strip() and not page.locator('.phrase-slots').inner_text().strip(),f'[{name}] order: no hint, shape or text before a mistake')
                 if q==0:shot(page,name+'-order-start',QA4)
+                SAY={'I':'eye'}  # a lone "I" card is read as "eye", not the letter
                 def hear(button):
                     n=page.evaluate('() => window.__speech.calls.length')
                     button.click()
@@ -1455,18 +1472,18 @@ def phrases_flow(run, browser, base, name, opts):
                         order_wrong=True
                         missed.append(p['id'])
                         for j in range(bank.count()):
-                            if hear(bank.nth(j))!=target: bank.nth(j).click();break
+                            if hear(bank.nth(j))!=SAY.get(target,target): bank.nth(j).click();break
                         page.wait_for_timeout(300)
                         hint=page.locator('.phrase-bank .hint')
                         run.check(hint.count()==1,f'[{name}] order: the right token glows only after a mistake')
                         shot(page,name+'-order-wrong',QA4)
                         page.wait_for_function("() => !document.querySelector('#playStage').dataset.listening")
-                        run.check(hear(hint)==target,f'[{name}] order: the glowing token is the next word')
+                        run.check(hear(hint)==SAY.get(target,target),f'[{name}] order: the glowing token is the next word')
                         hint.click()
                         continue
                     for j in range(bank.count()):
                         # Solve by listening only: tap to hear, tap again to place.
-                        if hear(bank.nth(j))==target:
+                        if hear(bank.nth(j))==SAY.get(target,target):
                             bank.nth(j).click();break
                     page.wait_for_timeout(60)
                 run.check(page.locator('.phrase-slots .filled').count()==len(tokens),f'[{name}] order: all words placed')
@@ -1481,7 +1498,10 @@ def phrases_flow(run, browser, base, name, opts):
         if mode=='review':
             run.check(zh_said(page,0,'phrases.review_done'),f'[{name}] review ends with its own done line')
             run.check(set(asked[:len(set(missed))])==set(missed),f'[{name}] review asks missed phrases first {asked} {missed}')
-        run.check(len(set(asked))==rounds[mode],f'[{name}] {mode} every phrase once per round')
+        # Small pools repeat, shuffled: every phrase comes up, never twice in a row.
+        pool_n={'listen':len(phrases),'order':len([p for p in phrases if 2<=len(p['english'].split())<=4]),'review':rounds['review']}[mode]
+        run.check(len(asked)==rounds[mode] and len(set(asked))==min(rounds[mode],pool_n),f'[{name}] {mode} every phrase comes up {asked}')
+        run.check(all(a!=b for a,b in zip(asked,asked[1:])),f'[{name}] {mode} no phrase twice in a row {asked}')
         shot(page,name+'-'+mode+'-result',QA4)
         if mode!='review':
             # Back to the phrase games menu (grid icon), not the word games.
@@ -1490,7 +1510,7 @@ def phrases_flow(run, browser, base, name, opts):
     snapshot=page.evaluate('() => Progress.snapshot()')
     run.check(all(snapshot['words'].get(p['id'],{}).get('seen',0)>0 for p in phrases),f'[{name}] phrase progress saved separately')
     run.check(any(r.get('wrong',0) for id,r in snapshot['words'].items() if id.startswith('phrase_')),f'[{name}] wrong phrases recorded')
-    run.check(snapshot['jar']['full']*12+snapshot['jar']['stars']==9,f'[{name}] three game rounds give three stars each in the shared jar; the card deck none')
+    run.check(snapshot['jar']['full']*page.evaluate('() => Progress.lib.JAR_SIZE')+snapshot['jar']['stars']==9,f'[{name}] three game rounds give three stars each in the shared jar; the card deck none')
     page.reload()
     page.wait_for_selector('#phrasesBtn:not([disabled])')
     run.check(page.evaluate('() => Progress.snapshot()')==snapshot,f'[{name}] phrase records and stars persist after reload')
@@ -1713,7 +1733,7 @@ def look_flow(run, browser, base, name, opts):
             n = calls(page)
             bank.nth(j).click()
             page.wait_for_function("(n) => window.__speech.calls.length > n", arg=n)
-            if page.evaluate("() => window.__speech.calls.at(-1).text") == want:
+            if page.evaluate("() => window.__speech.calls.at(-1).text") == {"I": "eye"}.get(want, want):  # a lone "I" card says "eye"
                 bank.nth(j).click()
                 break
     page.wait_for_timeout(250)

@@ -6,7 +6,7 @@
 1. **只在本機 commit。** 不得 git push、不得建立 GitHub repo、不得開／改 PR、不得 gh 寫入、不得部署。Tim 說「推送」才由助理處理。
 2. **玩家是還不識字的幼兒（最高優先）。** 所有操作只靠圖片、大圖示和語音完成：中文語音說明怎麼玩，英文念單字／句子。英文字只當輔助顯示（跟著 Aa／中 開關）。任何玩法都不能要求讀懂文字才答得對。
 3. **中文語音一律預錄。** 新中文台詞加進 `data/voice-zh.json`，用 `tools/gen-voice.py` 錄成 mp3（edge-tts `zh-TW-HsiaoChenNeural`，rate -8%，`~/.local/bin/edge-tts`）。不可有中文走瀏覽器 TTS。英文單字發音維持現狀。
-4. **單字維持 14 個**（動物：goat, cow, koala, lion, zebra, wolf, rabbit, turtle, monkey（Tim 2026-10-23 加）；萬聖節：vampire, zombie, witch, pumpkin, monster）。不可自行新增或刪除單字／句子，新內容只照 Tim 在聊天給的清單。新增內容照 `docs/ADD_CONTENT.md`。家長專區（裝置上自訂內容）已在第 8 階段移除，不要加回。
+4. **單字維持 41 個**（動物：goat, cow, koala, lion, zebra, wolf, rabbit, turtle, monkey（Tim 2026-10-23 加）, cat, penguin, elephant, dog, duck, fish, shark（Tim 2026-10-24 加）；萬聖節：vampire, zombie, witch, pumpkin, monster；數字（Tim 2026-10-24 加）：one … ten；顏色（Tim 2026-10-24 加）：red, blue, yellow, green, orange, purple, pink, black, white, brown）。不可自行新增或刪除單字／句子，新內容只照 Tim 在聊天給的清單。新增內容照 `docs/ADD_CONTENT.md`。家長專區（裝置上自訂內容）已在第 8 階段移除，不要加回。
 5. **點卡片只左右搖擺，不可整圈旋轉。**
 6. **「玩遊戲」只有三種：** 聽音找圖、連連看、翻牌記憶（泡泡遊戲已刪除，不要加回）。
 7. **不移動 Aa／中 開關的位置**（單字卡、句子卡上方）。

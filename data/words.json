@@ -15,6 +15,7 @@
   {"id": "duck", "english": "duck", "chinese": "鴨子", "image": "images/words/duck.svg", "theme": "animals"},
   {"id": "fish", "english": "fish", "chinese": "魚", "image": "images/words/fish.svg", "theme": "animals"},
   {"id": "shark", "english": "shark", "chinese": "鯊魚", "image": "images/words/shark.svg", "theme": "animals"},
+  {"id": "crocodile", "english": "crocodile", "chinese": "鱷魚", "image": "images/words/crocodile.svg", "theme": "animals"},
   {"id": "vampire", "english": "vampire", "chinese": "吸血鬼", "image": "images/words/vampire.svg", "theme": "halloween"},
   {"id": "zombie", "english": "zombie", "chinese": "殭屍", "image": "images/words/zombie.svg", "theme": "halloween"},
   {"id": "witch", "english": "witch", "chinese": "女巫", "image": "images/words/witch.svg", "theme": "halloween"},
@@ -39,5 +40,7 @@
   {"id": "pink", "english": "pink", "chinese": "粉紅色", "image": "images/words/pink.svg", "theme": "colors"},
   {"id": "black", "english": "black", "chinese": "黑色", "image": "images/words/black.svg", "theme": "colors"},
   {"id": "white", "english": "white", "chinese": "白色", "image": "images/words/white.svg", "theme": "colors"},
-  {"id": "brown", "english": "brown", "chinese": "棕色", "image": "images/words/brown.svg", "theme": "colors"}
+  {"id": "brown", "english": "brown", "chinese": "棕色", "image": "images/words/brown.svg", "theme": "colors"},
+  {"id": "cookie", "english": "cookie", "chinese": "餅乾", "image": "images/words/cookie.svg", "theme": "snacks"},
+  {"id": "candy", "english": "candy", "chinese": "糖果", "image": "images/words/candy.svg", "theme": "snacks"}
 ]

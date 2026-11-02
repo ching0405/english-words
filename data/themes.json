@@ -26,5 +26,12 @@
     "chinese": "顏色",
     "color": "#a8d8ff",
     "icon": "images/words/red.svg"
+  },
+  {
+    "id": "snacks",
+    "english": "Snacks",
+    "chinese": "點心",
+    "color": "#ffe8a3",
+    "icon": "images/words/cookie.svg"
   }
 ]

@@ -419,5 +419,15 @@
     "lufs": -16.2,
     "tp": -2.7,
     "target": -16.0
+  },
+  "theme.snacks": {
+    "text": "點心",
+    "hash": "4786ddfc79ebe4bd",
+    "src": "81c02a2bc4139737",
+    "gain_db": 2.8,
+    "limited": true,
+    "lufs": -16.0,
+    "tp": -3.0,
+    "target": -16.0
   }
 }

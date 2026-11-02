@@ -166,14 +166,23 @@ h1 .en { display: block; font-size: clamp(26px, 6.4vw, 64px); color: var(--sky-i
   .theme-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); width: 100%; max-width: calc(3 * 380px + 2 * var(--gutter)); margin: 0 auto; padding-top: 4vh; }
 }
 
-/* Word themes (#themeGrid): today's review and all four themes on one iPad
-   screen, no scrolling (four themes since 2026-10-24). Upright: review across
-   the top, themes 2 x 2. Sideways: five columns. The rows share the height
+/* Word themes (#themeGrid): today's review and all five themes on one iPad
+   screen, no scrolling (five themes since the Snacks theme). Upright: review
+   across the top, themes 3 + 2 on tablets (6-column grid, so the last two
+   share the row), 2 per row on phones (an odd last theme spans both).
+   Sideways: six columns, review first. The rows share the height
    left under the Games button and each picture takes what its words and
    stars leave; text scales with the card width (container units). */
 #themeGrid {
   grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; grid-auto-rows: minmax(220px, 1fr);
   align-content: stretch; padding-top: 16px;
+}
+#themeGrid .theme-card:not(.review-card):last-child:nth-child(even) { grid-column: 1 / -1; }
+@media (min-width: 700px) {
+  #themeGrid { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-auto-rows: minmax(250px, 1fr); }
+  #themeGrid .theme-card:not(.review-card) { grid-column: span 2; }
+  #themeGrid .theme-card:not(.review-card):nth-last-child(-n+2):nth-child(odd),
+  #themeGrid .theme-card:not(.review-card):nth-last-child(-n+2):nth-child(even) { grid-column: span 3; }
 }
 #themeGrid .theme-card:not(.review-card) { container-type: inline-size; justify-content: center; min-height: 0; padding: 10px 8px 14px; }
 #themeGrid .theme-card:not(.review-card) img {
@@ -189,7 +198,9 @@ h1 .en { display: block; font-size: clamp(26px, 6.4vw, 64px); color: var(--sky-i
 #themeGrid .review-pic { width: min(30vw, 11vh, 150px); height: min(30vw, 11vh, 150px); }
 #themeGrid .review-card { padding-top: 10px; padding-bottom: 12px; }
 @media (orientation: landscape) and (min-aspect-ratio: 5/4) {
-  #themeGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: minmax(240px, 1fr); max-width: none; }
+  #themeGrid { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: minmax(240px, 1fr); grid-auto-rows: auto; max-width: none; }
+  #themeGrid .theme-card:not(.review-card), #themeGrid .theme-card:not(.review-card):nth-last-child(-n+2):nth-child(odd),
+  #themeGrid .theme-card:not(.review-card):nth-last-child(-n+2):nth-child(even), #themeGrid .theme-card:not(.review-card):last-child:nth-child(even) { grid-column: auto; }
   #themeGrid .review-card { container-type: inline-size; justify-content: center; min-height: 0; padding: 10px 8px 14px; }
   #themeGrid .review-pic { flex: 0 1 auto; width: 100%; height: min(100cqw, 260px); min-height: 64px; }
   #themeGrid .theme-zh { font-size: min(44px, 24cqw, 5.4vh); }

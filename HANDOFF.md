@@ -1,3 +1,7 @@
+# 2026-10-29：發布排除原始音檔（本機候選）
+
+發布快照一律排除 `qa/` 和 `audio-src/`，原始音檔留在開發 repo，不刪。正式發布步驟及本機候選驗證見 `docs/RELEASE_CHECKLIST.md`；`docs/ADD_CONTENT.md` 的發布步驟同步更新。遊戲只讀 `audio/`，SW 清單和版本不變。候選由 `1bb8be2` 建立為無父 commit 的 `codex/release-no-audiosrc`，不推送、不部署。
+
 # 交接手冊
 
 ## 2026-10-24：動物＋數字＋顏色主題、I 的語音、星星罐、題數（Claude，本機分支 `claude/single-i-voice`，從線上版來源 `143f70b` 分出）

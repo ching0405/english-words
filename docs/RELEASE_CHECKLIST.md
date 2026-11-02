@@ -1,16 +1,17 @@
 # 上線前檢查清單＋GitHub Pages 設定步驟
 
-**Tim 說「推送」之前，第 2 段以後都不做。** 第 1 段可以隨時在本機跑；第 2、3 段要動到 GitHub，由助理在 Tim 同意後照做。
+**只有任務明確寫「Tim 已同意推送」才可 push、改 GitHub 或部署。** 可以先依本文件建立本機候選分支並驗證；所有遠端操作另等明確授權。
 
-目前狀態（2026-10-23）：repo 沒有設定任何 remote（`git remote -v` 是空的），也還沒有 GitHub repo。
+目前線上版：`https://ching0405.github.io/english-words/`，repo `ching0405/english-words`；發布 worktree：`~/repos/english-words-release`。
 
 ## Tim 已決定（2026-10-23）
 
 - **repo 名稱：`english-words`** → 網址 `https://<帳號>.github.io/english-words/`。上線後不要改名，改名會換網址，iPad 上的主畫面圖示和進度都要重來。
 - **`qa/` 截圖不公開。** 免費帳號的 Pages 必須是公開 repo，而 `qa/` 已經出現在開發分支的**歷史**裡（目前有 19 個 commit 碰過）。光是在最新的 commit 刪掉 `qa/` 不夠，別人還是能從舊 commit 拿到。所以：
   - **開發分支永遠不推**（`local/…`、`claude/…`、`codex/…`）；
-  - 另外做一個**沒有歷史的發布分支 `release`**，內容是開發分支的快照、去掉 `qa/`，只推這個分支當 GitHub 的 `main`（見第 2 段）；
-  - 開發分支的 `.gitignore` **不加** `qa/`，驗收截圖照舊 commit 在本機；`release` 分支的 `.gitignore` 才加 `qa/`。
+  - 另外做一個**沒有歷史的發布分支 `release`**，內容是開發分支的快照、去掉 `qa/` 和 `audio-src/`，只推這個分支當 GitHub 的 `main`（見第 2 段）；
+  - 開發分支的 `.gitignore` **不加** `qa/`，驗收截圖照舊 commit 在本機；`release` 分支的 `.gitignore` 才加 `qa/` 和 `audio-src/`。
+- **原始音檔不發布（Tim 2026-10-29）。** `audio-src/` 和 `qa/` 一律從發布快照排除，原檔仍保留在開發 repo，供 `gen-voice.py`／`normalize-audio.py` 使用。遊戲只讀 `audio/`，`sw.js` 與 `build-sw.py` 不引用原始音檔。此規則不會移除既有遠端歷史裡已公開的原檔。
 - **上線順序**（建議，仍待 Tim 說「推送」）：先推上去當測試網址（不對外公告），用 iPad 照 `docs/IOS_DEVICE_CHECKLIST.md` 測完再正式用。加到主畫面、離線、更新這幾項只有 https 才測得到。
 
 ## 1. 推送前（本機）
@@ -33,16 +34,16 @@
    git worktree add --detach ~/repos/english-words-release <開發 commit>
    cd ~/repos/english-words-release
    git checkout --orphan release            # 新分支，沒有任何舊歷史
-   git rm -r -q --cached qa && rm -rf qa    # 截圖不發布
-   printf 'qa/\n' >> .gitignore
+   git rm -r -f -q --ignore-unmatch qa audio-src  # 只在發布 worktree 排除
+   printf 'qa/\naudio-src/\n' >> .gitignore
    touch .nojekyll                          # GitHub 不用 Jekyll 處理檔案
-   python3 tools/build-sw.py --check        # 必須 OK（qa/ 不在離線清單，版本號不變）
+   python3 tools/build-sw.py --check        # 必須 OK（qa/、audio-src/ 不在離線清單，版本號不變）
    git add -A && git commit -m "Release from <開發 commit>"
    ```
-3. 發布前確認，三行都要符合：
+3. 發布前確認，以下結果都要符合：
    ```bash
    git rev-list --count release             # 1（只有一個 commit）
-   git ls-files | grep -c '^qa/'            # 0
+   git ls-files | grep -Ec '^(qa|audio-src)/' # 0（grep 無匹配會回傳 1）
    git ls-files | grep -c '^\.nojekyll$'    # 1
    ```
 4. 推上去（**只推 `release`**）：
@@ -69,18 +70,20 @@
 ## 4. 之後更新網站
 
 1. 在開發分支改完、跑 `python3 tools/build-sw.py`（版本號會變）、`python3 tools/check-all.py` 全過，然後 commit。
-2. 在發布資料夾換成新的快照，加在 `release` 上面（`release` 只會有發布紀錄，沒有開發歷史，也沒有 `qa/`）：
+2. 在發布資料夾換成新的快照，加在 `release` 上面（`release` 只會有發布紀錄，沒有開發歷史，也沒有 `qa/`、`audio-src/`）：
    ```bash
    cd ~/repos/english-words-release
    git rm -r -q . && git checkout <新的開發 commit> -- .
-   git rm -r -q --cached qa && rm -rf qa
-   printf 'qa/\n' >> .gitignore && touch .nojekyll
+   git rm -r -f -q --ignore-unmatch qa audio-src
+   printf 'qa/\naudio-src/\n' >> .gitignore && touch .nojekyll
    python3 tools/build-sw.py --check
    git add -A && git commit -m "Release from <新的開發 commit>"
-   git ls-files | grep -c '^qa/'            # 0
+   git ls-files | grep -Ec '^(qa|audio-src)/' # 0（grep 無匹配會回傳 1）
    git push origin release:main
    ```
 3. iPad 下次連網開啟（或從背景切回來）時會在背景下載新版，**等孩子回到首頁才重新整理**，進度不受影響。
+
+本機候選可用 `git checkout --orphan codex/release-<名稱> <開發 commit>`，再依第 2 段排除兩個資料夾、加 `.nojekyll`、驗證並 commit；不要移動 `release` 或遠端分支。開發 repo 先跑 `check-all.py --quick`（含原檔音量比對）；候選因刻意無 `audio-src/`，只跑 Node 測試、兩組資料驗證／錯誤案例、`build-sw.py --check` 與 `selftest.py --only pwa`，並逐一 HTTP 檢查 `audio/` 與 SW FILES。候選不要跑需要原檔的 `normalize-audio.py --check`。
 
 ## 5. 出問題要退回上一版
 

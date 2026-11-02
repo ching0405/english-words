@@ -1,0 +1,7 @@
+completed: release-no-audiosrc
+branch: codex/release-no-audiosrc
+source: 1bb8be2
+excluded: qa/, audio-src/
+validation: source quick 7/7; candidate validators and Node pass; PWA 17/0; 119 SW URLs and 43 audio files HTTP 200; all 42 MP3 decoded and played; 41 en-US TTS requests; no console errors
+report: /home/box/claude-runs/english/release-no-audiosrc/report.md
+local only; no push or deployment

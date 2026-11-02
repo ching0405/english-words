@@ -144,8 +144,8 @@ git commit -m "Add word: panda"
 ## 8. 發布（只有 Tim 說「推送」之後）
 
 1. 先跑完整驗收：`python3 tools/check-all.py`，最後一行必須是 `ALL … STEPS PASSED`（約半小時到一小時）。
-2. 照 `docs/RELEASE_CHECKLIST.md` 第 4 段「之後更新網站」：在 `~/repos/english-words-release` 換成新的快照、拿掉 `qa/`、加 `.nojekyll`、`build-sw.py --check`、commit。
-3. 推之前確認 `git ls-files | grep -c '^qa/'` 是 0。
+2. 照 `docs/RELEASE_CHECKLIST.md` 第 4 段「之後更新網站」：在 `~/repos/english-words-release` 換成新的快照、拿掉 `qa/` 和 `audio-src/`、加 `.nojekyll`、`build-sw.py --check`、commit。
+3. 推之前確認 `git ls-files | grep -Ec '^(qa|audio-src)/'` 是 0。
 4. `git push origin release:main`。**只推 `release`，開發分支永遠不推**（`qa/` 在開發分支的歷史裡，不公開）。
 5. 照 RELEASE_CHECKLIST 第 3 段做上線後檢查。出問題照第 5 段 `git revert`，不要 force push。
 

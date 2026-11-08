@@ -40,11 +40,13 @@
     if (id === 'games') Games.menu();
     if (id === 'phrases') { buildPhrases(); Speech.zh('phrases.home'); }
     if (id === 'phraseGames') { Phrases.menu(); Speech.zh('games.pick'); }
+    if (id === 'settings') Settings.render();
+    if (id === 'stickers') setTimeout(Stickers.fit, 0);
     Jar.renderAll();
     if (id === 'home' && window.Pwa) Pwa.atHome(); // a new version waits for the home screen
     keepFocus(document.getElementById(id));
   }
-  window.App = { show: show, reviewCards: reviewCards, toast: toast };
+  window.App = { show: show, toast: toast };
 
   var toastTimer;
   function toast(msg) {
@@ -110,11 +112,14 @@
   function buildThemes() {
     var grid = $('#themeGrid');
     grid.textContent = '';
+    // Today's review stays in the word range; the theme cards show every theme
+    // (Tim 2026-11-07: the range only limits the games, not browsing cards).
     grid.appendChild(reviewCard(Progress.due(state.words), function () { Games.review(); }));
-    state.themes.forEach(function (th) {
-      var list = Data.wordsInTheme(state.words, th.id);
+    var all = state.base.words;
+    state.base.themes.forEach(function (th) {
+      var list = Data.wordsInTheme(all, th.id);
       if (!list.length) return;
-      grid.appendChild(themeCard(th, list.length, Progress.themeStars(state.words, th.id), function () { openTheme(th.id); }));
+      grid.appendChild(themeCard(th, list.length, Progress.themeStars(all, th.id), function () { openTheme(th.id); }));
     });
   }
 
@@ -158,8 +163,9 @@
     grid.appendChild(themeCard(PHRASE_DECK, list.length, Progress.themeStars(asTheme, 'phrases'), function () { openDeck(list, 'phrases'); }));
   }
 
+  // Every word of the theme, even when the theme is off in settings.
   function openTheme(id) {
-    openDeck(Data.wordsInTheme(state.words, id), 'words');
+    openDeck(Data.wordsInTheme(state.base.words, id), 'words');
   }
 
   // Word or phrase cards on the same screen; the back button returns to their area.
@@ -187,18 +193,6 @@
     } else {
       speakCurrent();
     }
-  }
-
-  // Today's review in card mode: look through the review words, then stars.
-  function reviewCards(list, intro) {
-    state.list = list;
-    state.i = 0;
-    setDeck('words');
-    show('cards');
-    renderCard(0);
-    Speech.zh(intro);
-    Speech.zh('cards.howto', { queue: true });
-    speakCurrent(true);
   }
 
   // ---------- cards
@@ -374,16 +368,25 @@
     $('#gamesBtn').addEventListener('click', function () { firstTap('games'); });
     $('#phraseGamesBtn').addEventListener('click', function () { firstTap('phraseGames'); });
     Games.bind();
+    Settings.init({
+      themes: function () { return state.base ? state.base.themes : []; },
+      words: function () { return state.base ? state.base.words : []; },
+      changed: function () { if (state.base) applyData(); },
+      toast: toast
+    });
     // A soft pop on menu and navigation buttons. Capture phase, so a button's
     // own sound (if any) starts after it and replaces it.
     document.addEventListener('click', function (e) {
       var b = e.target.closest && e.target.closest('[data-go], .btn-nav, .theme-card, .game-card, .chip, .btn-wide');
       if (b && !b.disabled) Fx.sound('pop');
     }, true);
+    // The star jar opens the sticker book (S2); its back button returns here.
     document.querySelectorAll('.jar-btn').forEach(function (b) {
       b.addEventListener('click', function () {
         Fx.move(b.querySelector('.jar-main'), 'wiggle');
-        Speech.zh('jar.look');
+        Speech.unlock();
+        Fx.unlock();
+        Stickers.open(b.closest('.screen').id);
       });
     });
     document.querySelectorAll('[data-go]').forEach(function (b) {
@@ -416,13 +419,18 @@
     });
   }
 
-  // The built-in lists from data/ (phrases arrive a moment later).
+  // The built-in lists from data/ (phrases arrive a moment later). Words and
+  // themes are cut to the word range a grown-up chose in settings (js/scope.js):
+  // games, today's review and the sticker book only see those. The theme
+  // cards and their word cards always show every theme (buildThemes).
   function applyData() {
-    state.words = state.base.words;
-    state.themes = state.base.themes;
+    var scope = Settings.scope();
+    state.words = Scope.words(state.base.words, scope);
+    state.themes = Scope.themes(state.base.themes, state.base.words, scope);
     buildThemes();
     Games.build(state.words, state.themes);
     state.phrases = state.base.phrases || [];
+    Stickers.setData(state.words, state.themes, state.phrases);
     if (state.base.phrases) Phrases.build(state.base.phrases);
     Jar.renderAll();
   }

@@ -11,6 +11,10 @@
     icon: '#g-memory',
     color: '#ffc9de',
     intro: 'intro.memory',
+    // Tim 2026-11-07 (翻牌不給貼紙): memory rounds give no sticker card, in
+    // games and in today's review. The shell checks this flag at the end of
+    // the round (js/games/shell.js finish); stars and progress stay as before.
+    stickers: false,
     start: function (api) {
       var words = api.targets ? api.targets.slice(0, PAIRS)
         : Quiz.pick({ words: api.words, themeId: api.themeId, count: PAIRS, rand: api.rand });

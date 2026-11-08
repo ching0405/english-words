@@ -30,10 +30,14 @@
         var q = 0;
         api.dots(list.length);
 
+        // Stars from mistakes, like the word games (S1, 2026-11-06): wrong
+        // pictures for listen and review, wrongly placed cards for order. Order
+        // is harder for small children, so its bar starts wider (Tim: 3 / 6).
+        var STARS = mode === 'order' ? [3, 6] : [2, 5];
         function end() {
-          if (mode !== 'review') { api.finish(100, 100); return; }
+          if (mode !== 'review') { api.finish(STARS[0], STARS[1]); return; }
           var over = false;
-          var go = function () { if (!over && api.alive()) { over = true; api.finish(100, 100); } };
+          var go = function () { if (!over && api.alive()) { over = true; api.finish(STARS[0], STARS[1]); } };
           api.zh('phrases.review_done', { onend: go });
           api.later(6000, go);
         }

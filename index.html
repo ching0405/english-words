@@ -60,6 +60,8 @@
     <path d="M128 112a13 13 0 1 0-1 13M130 100v12h-12" fill="none" stroke="#fff" stroke-width="7"/></g></symbol>
   <symbol id="i-music" viewBox="0 0 48 48"><path d="M19 34V10l20-4v24"/><circle cx="14" cy="34" r="5" fill="currentColor"/><circle cx="34" cy="30" r="5" fill="currentColor"/></symbol>
   <symbol id="i-music-off" viewBox="0 0 48 48"><path d="M19 34V10l20-4v24"/><circle cx="14" cy="34" r="5" fill="currentColor"/><circle cx="34" cy="30" r="5" fill="currentColor"/><path d="M7 7l34 34" stroke-width="5"/></symbol>
+<!-- i-gear: the settings door, the same symbol the phase 6 parent corner used. -->
+  <symbol id="i-gear" viewBox="0 0 48 48"><path d="M38.3 19.6 L43.7 20.6 L43.7 27.4 L38.3 28.4 L37.3 31.0 L40.3 35.5 L35.5 40.3 L31.0 37.3 L28.4 38.3 L27.4 43.7 L20.6 43.7 L19.6 38.3 L17.0 37.3 L12.5 40.3 L7.7 35.5 L10.7 31.0 L9.7 28.4 L4.3 27.4 L4.3 20.6 L9.7 19.6 L10.7 17.0 L7.7 12.5 L12.5 7.7 L17.0 10.7 L19.6 9.7 L20.6 4.3 L27.4 4.3 L28.4 9.7 L31.0 10.7 L35.5 7.7 L40.3 12.5 L37.3 17.0Z"/><circle cx="24" cy="24" r="6"/></symbol>
   <symbol id="i-star" viewBox="0 0 48 48"><path d="M24 4l6 13 14 1.5-10.5 9.5 3 14L24 35l-12.5 7 3-14L4 18.5 18 17z"/></symbol>
 </svg>
 
@@ -85,6 +87,26 @@
     <p id="loadMsg" class="hint" role="status">準備中… Loading…</p>
     <!-- Background music on/off (js/music.js): a picture only, the music itself is the feedback. -->
     <button id="musicBtn" class="btn btn-icon music-btn" type="button" aria-pressed="true" aria-label="背景音樂 Music"><svg class="ic" aria-hidden="true"><use href="#i-music"/></svg></button>
+    <!-- Settings for grown-ups: hold 2 s, then a sum only a grown-up can do (js/settings.js). -->
+    <button id="settingsDoor" class="settings-door" type="button" aria-label="設定（大人長按 2 秒）"><svg class="ic" aria-hidden="true"><use href="#i-gear"/></svg></button>
+  </section>
+
+  <!-- Grown-up settings: which themes the games, review, cards and sticker book use. -->
+  <section id="settings" class="screen settings" hidden aria-labelledby="settingsTitle">
+    <header class="bar">
+      <button class="btn btn-icon" type="button" data-go="home" aria-label="回首頁 Home"><svg class="ic"><use href="#i-home"/></svg></button>
+      <h2 id="settingsTitle">設定（大人用）</h2>
+      <span class="bar-gap" aria-hidden="true"></span>
+    </header>
+    <div class="settings-body">
+      <section class="psec" aria-labelledby="scopeTitle">
+        <h3 id="scopeTitle">單字範圍</h3>
+        <p class="pnote">關掉的主題不會出現在遊戲、今日複習、主題卡和貼紙簿。新加的主題預設開啟。學習紀錄和星星不會被刪掉，再打開就回來。</p>
+        <ul id="scopeList" class="scope-list"></ul>
+        <p id="scopeCount" class="pnote scope-count" role="status"></p>
+        <p id="scopeFew" class="pnote" hidden></p>
+      </section>
+    </div>
   </section>
 
   <!-- Phrases, laid out like the word area: games button on top, then today's review and the phrase cards. -->
@@ -150,8 +172,17 @@
       <h2 id="gamesTitle">小遊戲 <span class="en aux-en">Games</span></h2>
       <span class="bar-gap" aria-hidden="true"></span>
     </header>
-    <div id="themeChips" class="chips" role="radiogroup" aria-label="選主題 Theme"></div>
     <div id="gameGrid" class="game-grid"></div>
+  </section>
+
+  <!-- S2 sticker book: opened from the star jar. Pictures only: grey = not yet, colour = collected, gold frame = known. -->
+  <section id="stickers" class="screen" hidden aria-label="貼紙簿 Stickers">
+    <header class="bar">
+      <button class="btn btn-icon" type="button" data-go="home" aria-label="回去 Back"><svg class="ic"><use href="#i-back"/></svg></button>
+      <span class="bar-gap" aria-hidden="true"></span>
+    </header>
+    <div id="stickerTabs" class="chips sticker-tabs" role="tablist" aria-label="貼紙簿 Stickers"></div>
+    <div id="stickerGrid" class="sticker-grid"></div>
   </section>
 
   <section id="play" class="screen" hidden aria-label="遊戲 Game">
@@ -165,6 +196,8 @@
 
   <section id="result" class="screen" hidden aria-label="結果 Result">
     <img id="resultFriend" class="result-friend" alt="" draggable="false">
+    <!-- S2: this round's sticker, a covered card (js/stickers.js); replaces the friend once the stars are in. -->
+    <div id="resultGift" class="result-gift" hidden></div>
     <div class="result-row">
       <div id="resultStars" class="result-stars" role="img" aria-live="polite"></div>
       <div class="jar-box result-jar" role="img" aria-label="星星罐 Star jar"></div>
@@ -177,6 +210,18 @@
   </section>
 </main>
 <div id="toast" class="toast" role="status" hidden></div>
+<div id="gate" class="gate" hidden>
+  <form id="gateForm" class="gate-box" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+    <h2 id="gateTitle">設定</h2>
+    <label for="gateAnswer">請大人算一算：<span id="gateQ"></span> = ?</label>
+    <input id="gateAnswer" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="3">
+    <p id="gateMsg" class="pmsg pmsg-bad" role="alert"></p>
+    <div class="pactions">
+      <button class="pbtn pbtn-main" type="submit">進入</button>
+      <button id="gateCancel" class="pbtn" type="button">取消</button>
+    </div>
+  </form>
+</div>
 
 <script src="js/data.js"></script>
 <script src="js/speech.js"></script>
@@ -184,6 +229,7 @@
 <script src="js/music.js"></script>
 <script src="js/quiz.js"></script>
 <script src="js/progress.js"></script>
+<script src="js/scope.js"></script>
 <script src="js/jar.js"></script>
 <script src="js/games/shell.js"></script>
 <script src="js/games/listen.js"></script>
@@ -191,6 +237,8 @@
 <script src="js/games/memory.js"></script>
 <script src="js/phrases.js"></script>
 <script src="js/phrase-ui.js"></script>
+<script src="js/stickers.js"></script>
+<script src="js/settings.js"></script>
 <script src="js/app.js"></script>
 <script src="js/pwa.js"></script>
 </body>

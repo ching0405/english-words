@@ -9,7 +9,7 @@
   // Chinese lines are keys of data/voice-zh.json (recorded mp3s).
   var PRAISE = ['praise.1', 'praise.2', 'praise.3', 'praise.4'];
   var defs = [];
-  var state = { words: [], themes: [], themeId: null, game: null, run: 0, timers: [], stops: [], mistakes: 0, replay: null };
+  var state = { words: [], themes: [], game: null, run: 0, timers: [], stops: [], mistakes: 0, replay: null };
 
   function el(tag, cls, attrs) {
     var e = document.createElement(tag);
@@ -40,30 +40,11 @@
   function register(def) { defs.push(def); }
 
   // ---------- menu
+  // `words` are the words in range (Scope.words): the menu has no theme
+  // chips any more (Tim 2026-11-06), the child cannot change the range here.
   function build(words, themes) {
     state.words = words;
     state.themes = themes.filter(function (t) { return Data.wordsInTheme(words, t.id).length; });
-    // The chosen theme may no longer exist.
-    if (state.themeId && !state.themes.some(function (t) { return t.id === state.themeId; })) state.themeId = null;
-    var chips = $('#themeChips');
-    chips.textContent = '';
-    [{ id: null, chinese: '全部', english: 'All' }].concat(state.themes).forEach(function (t) {
-      var b = el('button', 'chip', { type: 'button', role: 'radio', 'aria-label': t.chinese + ' ' + t.english });
-      b.dataset.theme = t.id || '';
-      if (t.icon) b.appendChild(el('img', '', { src: t.icon, alt: '' }));
-      else b.appendChild(icon('#i-star', 'chip-star'));
-      var label = el('span', 'chip-label');
-      label.textContent = t.chinese;
-      b.appendChild(label);
-      if (t.color) b.style.setProperty('--theme', t.color);
-      b.addEventListener('click', function () {
-        state.themeId = t.id;
-        markChips();
-        Speech.zh(t.id ? 'theme.' + t.id : 'games.all');
-      });
-      chips.appendChild(b);
-    });
-    markChips();
     var grid = $('#gameGrid');
     grid.textContent = '';
     defs.forEach(function (def) {
@@ -78,12 +59,6 @@
       b.append(zh, en);
       b.addEventListener('click', function () { open(def); });
       grid.appendChild(b);
-    });
-  }
-
-  function markChips() {
-    document.querySelectorAll('#themeChips .chip').forEach(function (c) {
-      c.setAttribute('aria-checked', String((c.dataset.theme || null) === state.themeId));
     });
   }
 
@@ -117,11 +92,15 @@
     state.opts = opts;
     state.mistakes = 0;
     state.roundWords = [];
+    state.rightWords = [];   // answered right this round: they can become stickers (js/stickers.js)
     var run = state.run;
     App.show('play');
     setBack(opts.back || 'games');
     var stage = $('#playStage');
     stage.textContent = '';
+    // The last round's sticker card leaves with its result screen.
+    $('#resultGift').textContent = '';
+    $('#resultGift').hidden = true;
     stage.className = 'play-stage game-' + def.id;
     $('#play').dataset.game = def.id;
     $('#play').dataset.mode = opts.mode || 'game';
@@ -149,7 +128,7 @@
     var api = {
       stage: stage,
       words: state.words,
-      themeId: state.themeId,
+      themeId: null,   // the word range is set by a grown-up in settings (js/scope.js)
       targets: opts.targets || null,
       rand: Math.random,
       el: el,
@@ -192,12 +171,15 @@
         }
       },
       miss: function () { state.mistakes++; },
+      // A word found / answered right without a miss: it may become this round's sticker.
+      earned: function (word) { if (word) state.rightWords.push(word); },
       // Learning progress for a word: 'seen', 'right' or 'wrong' (js/progress.js).
       record: function (word, outcome) {
         if (!word) return;
         Progress.played(word.id);
         if (outcome === 'seen') Progress.seen(word.id);
         else Progress.answer(word.id, outcome === 'right');
+        if (outcome === 'right') state.rightWords.push(word);
       },
       // Words missed in this round, asked once more at the end: one
       // listen-and-pick question each (hear the word, pick from 4 pictures),
@@ -252,20 +234,27 @@
         ask();
       },
       // End of round: stars from mistakes (`ok` or fewer = 3, `fair` or fewer = 2).
+      // A game with `stickers: false` (memory, Tim 2026-11-07) offers no words
+      // for the sticker card, whatever was collected in state.rightWords.
       finish: function (ok, fair) {
-        later(300, function () { result(Quiz.stars(state.mistakes, ok, fair)); });
+        var right = def.stickers === false ? [] : null;
+        later(300, function () { result(Quiz.stars(state.mistakes, ok, fair), null, right); });
       }
     };
     def.start(api);
   }
 
   // Result screen: stars, then they fly into the star jar. `words` are the
-  // words of this round; one of them jumps above the stars.
-  function result(n, words) {
+  // words of this round; one of them jumps above the stars. Then (S2) a
+  // covered card with this round's sticker takes its place: `right` are the
+  // words answered right, Stickers picks one and saves it straight away.
+  function result(n, words, right) {
     var round = words || state.roundWords || [];
+    var gift = window.Stickers ? Stickers.grant(right || state.rightWords || []) : null;
     stop();
     App.show('result');
     var friend = $('#resultFriend');
+    friend.hidden = false;
     var pool = round.length ? round : state.words;
     var w = pool[Math.floor(Math.random() * pool.length)];
     if (w) { friend.src = w.image; friend.dataset.word = w.id; }
@@ -286,6 +275,8 @@
     });
     Speech.zh('stars.' + n);
     Jar.drop(n, [].slice.call(box.querySelectorAll('.big-star.on')), $('#result .jar-box'), 1100);
+    // The card comes once the stars have flown into the jar (1.1 s + 0.7 s + 0.18 s a star).
+    if (window.Stickers) Stickers.card(gift, 1100 + 700 + 180 * Math.max(0, n - 1) + 400);
   }
 
   function bind() {
@@ -300,29 +291,22 @@
 
   // Today's review: due words first (then the least known), so missed words
   // come back. Nothing due: say so kindly and practise the words that need it
-  // most. The play mode takes turns: listen, match, memory, cards.
+  // most. The play mode takes turns: listen, match, memory (Progress.REVIEW_MODES).
   var REVIEW_SIZE = Quiz.ROUNDS.review;
   function review() {
     var set = Progress.reviewSet(state.words, REVIEW_SIZE);
     var intro = set.due.length ? 'review.intro' : 'review.none';
     var list = Quiz.shuffle(set.list, Math.random);
     var mode = Progress.nextReviewMode();
-    var def = defs.filter(function (d) { return d.id === mode; })[0];
-    if (!def) {
-      // Cards: look through the review words (counts as seen only).
-      stop();
-      state.game = null;
-      state.opts = { mode: 'review' };
-      App.reviewCards(list, intro);
-      return;
-    }
+    var def = defs.filter(function (d) { return d.id === mode; })[0] || defs[0];
     open(def, { targets: list, intro: intro, back: 'themes', mode: 'review' });
   }
 
-  // The result screen with n stars (tests and audits use it to reach the screen).
-  function showResult(n, words) {
+  // The result screen with n stars (tests and audits use it to reach the screen);
+  // `right`: words answered right, for the sticker card.
+  function showResult(n, words, right) {
     setBack('games');
-    result(n, words || []);
+    result(n, words || [], right || []);
   }
 
   window.Games = { open: open, register: register, build: build, menu: menu, stop: stop, bind: bind, review: review, showResult: showResult, list: function () { return defs.slice(); } };

@@ -11,6 +11,10 @@
 //   themeStars(words, themeId)  0–3 stars for a theme from games only; never goes down
 //   addJarStars(n)    put a round's stars in the star jar; {jar, filled}
 //   nextReviewMode()  the play mode for today's review, taking turns
+//   collect(id)       put a word's / phrase's sticker in the sticker book;
+//                     true when it is new (js/stickers.js picks which one)
+//   stickers()        {id: time collected}
+//   isGold(id)        a collected sticker whose word reached KNOWN_BOX (gold frame)
 //   forget(ids, themeIds)  drop the records of deleted (parent-made) words;
 //                     false when the save could not be written
 //
@@ -28,14 +32,17 @@
 
   var KEY = 'ew.progress';
   var BROKEN_KEY = 'ew.progress.broken';
-  var VERSION = 3;
+  var VERSION = 4;
   var DAY = 24 * 60 * 60 * 1000;
   // Calendar days until the next review for each box. Box 0 = just met or just missed.
   var INTERVALS = [1, 1, 2, 4, 8, 16];
   var MAX_BOX = INTERVALS.length - 1;
   var KNOWN_BOX = 2;              // box 2+ counts as "known" for theme stars
   var JAR_SIZE = 30;              // stars that fill one star jar (12 until 2026-10-24)
-  var REVIEW_MODES = ['listen', 'match', 'memory', 'cards'];
+  // Today's review takes turns between the three games (cards left the turn
+  // 2026-11-06, S1: every review now ends with stars). Older saves kept a turn
+  // of 0–3; clean() maps it with % REVIEW_MODES.length, so 3 (cards) -> listen.
+  var REVIEW_MODES = ['listen', 'match', 'memory'];
 
   // Older save formats -> next version.
   var MIGRATIONS = {
@@ -55,6 +62,20 @@
     // v3 adds best theme stars, the star jar and the review turn.
     2: function (old) {
       return { version: 3, words: old.words, best: {}, jar: { stars: 0, full: 0 }, reviewTurn: 0 };
+    },
+    // v4 (S2, 2026-11-06) adds the sticker book. A word or phrase already
+    // answered right counts as collected, so a child who has played before
+    // does not open a book of grey shapes. Also room for later steps (S3/S4,
+    // not used yet): lastGiftDay, plays per game, days played.
+    3: function (old) {
+      var stickers = {};
+      var words = old.words && typeof old.words === 'object' ? old.words : {};
+      Object.keys(words).forEach(function (id) {
+        var r = words[id];
+        if (r && num(r.right) > 0) stickers[id] = num(r.last) || 1;
+      });
+      return { version: 4, words: old.words, best: old.best, jar: old.jar, reviewTurn: old.reviewTurn,
+               stickers: stickers, lastGiftDay: 0, plays: {}, days: {} };
     }
   };
 
@@ -68,7 +89,18 @@
     return d.getTime();
   }
 
-  function fresh() { return { version: VERSION, words: {}, best: {}, jar: { stars: 0, full: 0 }, reviewTurn: 0 }; }
+  function fresh() {
+    return { version: VERSION, words: {}, best: {}, jar: { stars: 0, full: 0 }, reviewTurn: 0,
+             stickers: {}, lastGiftDay: 0, plays: {}, days: {} };
+  }
+
+  // {key: non-negative number}, anything else dropped.
+  function numbers(obj) {
+    var out = {};
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return out;
+    Object.keys(obj).forEach(function (k) { if (typeof obj[k] === 'number' && isFinite(obj[k]) && obj[k] >= 0) out[k] = obj[k]; });
+    return out;
+  }
 
   // Keep only well-formed data; drop anything else.
   function clean(data) {
@@ -89,6 +121,10 @@
     var stars = Math.floor(num(jar.stars));
     out.jar = { stars: stars % JAR_SIZE, full: Math.floor(num(jar.full)) + Math.floor(stars / JAR_SIZE) };
     out.reviewTurn = Math.floor(num(data.reviewTurn)) % REVIEW_MODES.length;
+    out.stickers = numbers(data.stickers);
+    out.lastGiftDay = num(data.lastGiftDay);
+    out.plays = numbers(data.plays);
+    out.days = numbers(data.days);
     return out;
   }
 
@@ -274,6 +310,23 @@
       return mode;
     }
 
+    // The sticker book. Returns true when the sticker is new.
+    function collect(id) {
+      ready();
+      if (data.stickers[id]) return false;
+      data.stickers[id] = now();
+      save();
+      return true;
+    }
+
+    function stickers() { ready(); return Object.assign({}, data.stickers); }
+
+    function isGold(id) {
+      ready();
+      var r = data.words[id];
+      return !!(data.stickers[id] && r && r.box >= KNOWN_BOX);
+    }
+
     // A parent deleted their own words (or a whole theme of their own): drop
     // just those records. Every other word, the jar and other themes stay.
     // Returns false when that could not be written, so the caller can say so.
@@ -293,13 +346,14 @@
       load: load, get: get, seen: seen, played: played, answer: answer, isDue: function (id) { return isDue(id); },
       due: due, reviewSet: reviewSet, themeStars: themeStars, addJarStars: addJarStars, jar: jar,
       nextReviewMode: nextReviewMode, forget: forget, clear: clear,
+      collect: collect, stickers: stickers, isGold: isGold,
       snapshot: function () { ready(); return JSON.parse(JSON.stringify(data)); }
     };
   }
 
   var Progress = {
     create: create, parse: parse, dayAfter: dayAfter, VERSION: VERSION, KEY: KEY, BROKEN_KEY: BROKEN_KEY,
-    DAY: DAY, INTERVALS: INTERVALS, JAR_SIZE: JAR_SIZE, REVIEW_MODES: REVIEW_MODES
+    DAY: DAY, INTERVALS: INTERVALS, JAR_SIZE: JAR_SIZE, REVIEW_MODES: REVIEW_MODES, KNOWN_BOX: KNOWN_BOX
   };
 
   if (typeof module !== 'undefined' && module.exports) {

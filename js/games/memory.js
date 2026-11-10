@@ -2,7 +2,6 @@
 (function () {
   'use strict';
 
-  var PAIRS = Quiz.ROUNDS.memoryPairs;
 
   Games.register({
     id: 'memory',
@@ -16,6 +15,7 @@
     // the round (js/games/shell.js finish); stars and progress stay as before.
     stickers: false,
     start: function (api) {
+      var PAIRS = api.rounds.memoryPairs;
       var words = api.targets ? api.targets.slice(0, PAIRS)
         : Quiz.pick({ words: api.words, themeId: api.themeId, count: PAIRS, rand: api.rand });
       var deck = Quiz.shuffle(words.concat(words), api.rand);
@@ -67,7 +67,8 @@
           // Let the word finish, then praise. Play can go on meanwhile.
           api.later(700, function () {
             Fx.move(a.c, 'cheer');
-            api.right(b.c, function () { if (all) api.finish(4, 9); });
+            // Stars: 12 cards allow 4 / 9 wrong pairs, a small board (幼幼模式) 2 / 4.
+            api.right(b.c, function () { if (all) { if (words.length <= 3) api.finish(2, 4); else api.finish(4, 9); } });
           });
         } else {
           setBusy(true);

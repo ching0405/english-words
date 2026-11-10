@@ -10,8 +10,9 @@
     color: '#ffe08a',
     intro: 'intro.listen',
     start: function (api) {
-      var qs = api.targets ? Quiz.questionsFor(api.targets, api.words, 4, api.rand)
-        : Quiz.questions({ words: api.words, themeId: api.themeId, count: Quiz.ROUNDS.listen, choices: 4, rand: api.rand });
+      var R = api.rounds;
+      var qs = api.targets ? Quiz.questionsFor(api.targets, api.words, R.choices, api.rand)
+        : Quiz.questions({ words: api.words, themeId: api.themeId, count: R.listen, choices: R.choices, rand: api.rand });
       var grid = api.el('div', 'choices');
       api.stage.appendChild(grid);
       api.dots(qs.length);
@@ -27,6 +28,7 @@
         if (q.target.id in missedAt && missedAt[q.target.id] < i) askedAfter[q.target.id] = true;
         api.setQ(i);
         grid.textContent = '';
+        grid.dataset.n = String(q.options.length);
         q.options.forEach(function (w) {
           var b = api.picture(w);
           b.addEventListener('click', function () { pick(b, w); });

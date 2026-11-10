@@ -76,6 +76,8 @@
     <h1 id="homeTitle"><span class="zh">看圖學英文</span><span class="en" lang="en">Picture Words</span></h1>
     <!-- Two learning areas; games remain inside the word area. -->
     <div class="home-menu">
+      <!-- One tap to play: today's review round (listen, match and memory take turns). A picture only. -->
+      <button id="playBtn" class="btn btn-sun play-big" type="button" disabled aria-label="玩 Play"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg></button>
       <button id="startBtn" class="btn btn-sun btn-wide" type="button" disabled aria-label="單字 Words">
         <svg class="ic"><use href="#i-cards"/></svg><span>單字 <b>Words</b></span>
       </button>
@@ -99,6 +101,13 @@
       <span class="bar-gap" aria-hidden="true"></span>
     </header>
     <div class="settings-body">
+      <section class="psec" aria-labelledby="easyTitle">
+        <div class="easy-row">
+          <h3 id="easyTitle">幼幼模式（3 歲左右）</h3>
+          <button id="easySwitch" class="scope-switch" type="button" role="switch" aria-checked="true" aria-labelledby="easyTitle"><span class="scope-knob"></span></button>
+        </div>
+        <p class="pnote">預設開啟。打開後每一輪變短、變簡單：聽音找圖 5 題、每題 3 張圖；連連看 2 板；翻牌 6 張；今日複習 5 個字；句子遊戲也縮短。答錯的字最多只再問 1 個。下一輪遊戲開始生效。</p>
+      </section>
       <section class="psec" aria-labelledby="scopeTitle">
         <h3 id="scopeTitle">單字範圍</h3>
         <p class="pnote">關掉的主題不會出現在遊戲、今日複習、主題卡和貼紙簿。新加的主題預設開啟。學習紀錄和星星不會被刪掉，再打開就回來。</p>
@@ -187,7 +196,7 @@
 
   <section id="play" class="screen" hidden aria-label="遊戲 Game">
     <header class="bar">
-      <button class="btn btn-icon" type="button" data-go="games" aria-label="回遊戲選單 Games"><svg class="ic"><use href="#i-grid"/></svg></button>
+      <button class="btn btn-icon back-btn" type="button" data-go="games" aria-label="回遊戲選單 Games"><svg class="ic"><use href="#i-grid"/></svg></button>
       <span id="dots" class="dots" aria-hidden="true"></span>
       <button id="replayBtn" class="btn btn-icon btn-sun" type="button" aria-label="再聽一次 Listen again"><svg class="ic"><use href="#i-speaker"/></svg></button>
     </header>
@@ -204,7 +213,7 @@
     </div>
     <div class="result-actions">
       <button id="againBtn" class="btn btn-sun btn-nav" type="button" aria-label="再玩一次 Play again"><svg class="ic"><use href="#i-again"/></svg></button>
-      <button class="btn btn-nav" type="button" data-go="games" aria-label="回遊戲選單 Games"><svg class="ic"><use href="#i-grid"/></svg></button>
+      <button class="btn btn-nav back-btn" type="button" data-go="games" aria-label="回遊戲選單 Games"><svg class="ic"><use href="#i-grid"/></svg></button>
       <button class="btn btn-nav" type="button" data-go="home" aria-label="回首頁 Home"><svg class="ic"><use href="#i-home"/></svg></button>
     </div>
   </section>

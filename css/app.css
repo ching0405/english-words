@@ -93,7 +93,7 @@ button:focus-visible, .theme-card:focus-visible, .pic:focus-visible { outline: 4
 h1 { margin: 0; line-height: 1.1; }
 h1 .zh { display: block; font-size: clamp(40px, 10vw, 96px); font-weight: 900; letter-spacing: .06em; }
 h1 .en { display: block; font-size: clamp(26px, 6.4vw, 64px); color: var(--sky-ink); font-weight: 900; }
-.home-menu { display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; }
+.home-menu { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 24px; }
 .btn-wide {
   min-height: calc(var(--tap) * 1.4); padding: 0 calc(var(--tap) * .6); border-radius: 999px;
   font-size: calc(var(--tap) * .5); font-weight: 900;
@@ -101,15 +101,29 @@ h1 .en { display: block; font-size: clamp(26px, 6.4vw, 64px); color: var(--sky-i
 .btn-wide .ic { width: calc(var(--tap) * .6); height: calc(var(--tap) * .6); }
 .btn-wide b { font-weight: 900; }
 .btn-wide:not(:disabled) { animation: breathe 1.6s ease-in-out infinite; }
+/* The big round play button: the one thing a child who cannot read taps. */
+.play-big { width: calc(var(--tap) * 2.1); height: calc(var(--tap) * 2.1); min-height: 0; padding: 0; border-radius: 50%; flex: none; }
+.play-big .ic { width: 52%; height: 52%; margin-left: 6%; }
+.play-big:not(:disabled) { animation: breathe 1.6s ease-in-out infinite; }
 @media (min-width: 700px) and (min-height: 700px) {
   /* Sized by height too, so iPad sideways (820 tall) still fits everything. */
   .home-art img { width: min(24vw, 22vh, 300px); }
   .home-art img:nth-child(2) { width: min(30vw, 27vh, 360px); }
   h1 .zh { font-size: min(11vw, 10vh, 128px); }
-  .home-menu .btn-wide { min-height: calc(var(--tap) * 1.5); font-size: calc(var(--tap) * .52); }
+  /* Smaller than the play button above them: that one is the child's. */
+  .home-menu .btn-wide { min-height: calc(var(--tap) * 1.15); font-size: calc(var(--tap) * .46); }
+}
+@media (min-width: 700px) and (min-height: 700px) and (orientation: landscape) {
+  /* iPad sideways: the play button on its own row, the two areas side by side under it. */
+  .home-menu { display: grid; grid-template-columns: auto auto; justify-items: center; gap: 20px 24px; }
+  .home-menu .play-big { grid-column: 1 / -1; }
+  /* Room for the music and settings corners beside the row. */
+  .home-menu .btn-wide { padding: 0 calc(var(--tap) * .38); font-size: calc(var(--tap) * .4); white-space: nowrap; }
+  .home-art img { width: min(24vw, 17vh, 300px); }
+  .home-art img:nth-child(2) { width: min(30vw, 21vh, 360px); }
 }
 @media (min-width: 700px) and (min-height: 700px) and (orientation: portrait) {
-  .home-menu { flex-direction: column; align-items: center; gap: 32px; }
+  .home-menu { flex-direction: column; align-items: center; gap: 22px; }
   .home-menu .btn-wide { min-width: min(560px, 80vw); }
 }
 .hint { margin: 0; min-height: 1.4em; font-size: 22px; font-weight: 700; color: var(--ink-soft); }
@@ -262,6 +276,11 @@ h1 .en { display: block; font-size: clamp(26px, 6.4vw, 64px); color: var(--sky-i
   .home-art { width: 100%; }
   .home-art img { width: clamp(70px, 20vh, 120px); }
   .home-art img:nth-child(2) { width: clamp(84px, 25vh, 140px); }
+  /* Play button and both areas in one row. */
+  .home-menu { flex-wrap: nowrap; align-items: center; gap: 14px; }
+  .home-menu .play-big { width: calc(var(--tap) * 1.5); height: calc(var(--tap) * 1.5); }
+  .home-menu .btn-wide { min-height: calc(var(--tap) * 1.1); padding: 0 calc(var(--tap) * .3); font-size: calc(var(--tap) * .36); white-space: nowrap; }
+  .home-menu .btn-wide .ic { width: calc(var(--tap) * .42); height: calc(var(--tap) * .42); }
   .theme-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
   .theme-card img { width: 84px; }
 }
@@ -326,6 +345,8 @@ h1 .en { display: block; font-size: clamp(26px, 6.4vw, 64px); color: var(--sky-i
 .choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gutter);
   width: min(100%, 64vh); width: min(100cqw, calc(100cqh - 12px)); aspect-ratio: 1; }
 .choices .pick { width: 100%; height: 100%; }
+/* three pictures (幼幼模式): the third sits in the middle of the second row */
+.choices[data-n="3"] .pick:nth-child(3) { grid-column: 1 / -1; justify-self: center; width: calc(50% - var(--gutter) / 2); }
 
 /* memory: 12 cards, 3×4 upright or 4×3 sideways */
 .memory {
@@ -334,6 +355,14 @@ h1 .en { display: block; font-size: clamp(26px, 6.4vw, 64px); color: var(--sky-i
 }
 @container (orientation: landscape) {
   .memory { --c: min(calc((100cqw - 3 * var(--gutter)) / 4), calc((100cqh - 2 * var(--gutter) - 12px) / 3)); grid-template-columns: repeat(4, var(--c)); }
+}
+/* 6 cards (幼幼模式): 2×3 upright or 3×2 sideways */
+.memory[data-cards="6"] {
+  --c: min(40vw, 24vh); --c: min(calc((100cqw - var(--gutter)) / 2), calc((100cqh - 2 * var(--gutter) - 12px) / 3));
+  grid-template-columns: repeat(2, var(--c));
+}
+@container (orientation: landscape) {
+  .memory[data-cards="6"] { --c: min(calc((100cqw - 2 * var(--gutter)) / 3), calc((100cqh - var(--gutter) - 12px) / 2)); grid-template-columns: repeat(3, var(--c)); }
 }
 .mcard { position: relative; padding: 0; border: 0; background: none; cursor: pointer; touch-action: manipulation; perspective: 800px; }
 .mcard-back, .mcard-face {
@@ -563,6 +592,8 @@ h1 .en { display: block; font-size: clamp(26px, 6.4vw, 64px); color: var(--sky-i
 }
 .psec { background: var(--paper); border: 3px solid var(--ink); border-radius: 24px; padding: 18px 20px; margin: 0 0 20px; }
 .psec h3 { margin: 0 0 10px; font-size: 26px; }
+.easy-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 10px; }
+.easy-row h3 { margin: 0; }
 .pnote { margin: 0 0 14px; color: var(--ink-soft); }
 .scope-list { list-style: none; margin: 16px 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .scope-row { display: flex; align-items: center; gap: 14px; padding: 8px 12px; border-radius: 18px; background: var(--theme, var(--bg)); }

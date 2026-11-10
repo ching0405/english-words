@@ -114,7 +114,7 @@
     grid.textContent = '';
     // Today's review stays in the word range; the theme cards show every theme
     // (Tim 2026-11-07: the range only limits the games, not browsing cards).
-    grid.appendChild(reviewCard(Progress.due(state.words), function () { Games.review(); }));
+    grid.appendChild(reviewCard(Progress.due(state.words), function () { Games.review('themes'); }));
     var all = state.base.words;
     state.base.themes.forEach(function (th) {
       var list = Data.wordsInTheme(all, th.id);
@@ -365,6 +365,14 @@
     }
     $('#startBtn').addEventListener('click', function () { firstTap('themes'); });
     $('#phrasesBtn').addEventListener('click', function () { firstTap('phrases'); });
+    // The big play button: straight into today's review round, back to home after.
+    $('#playBtn').addEventListener('click', function () {
+      Speech.unlock();
+      Fx.unlock();
+      Fx.sound('pop');
+      Games.review('home');
+      if (!Speech.supported) toast(TEXT.noVoice);
+    });
     $('#gamesBtn').addEventListener('click', function () { firstTap('games'); });
     $('#phraseGamesBtn').addEventListener('click', function () { firstTap('phraseGames'); });
     Games.bind();
@@ -447,6 +455,7 @@
     }).then(function () {
       applyData();
       $('#startBtn').disabled = false;
+      $('#playBtn').disabled = false;
       $('#gamesBtn').disabled = false;
       Data.getJSON('data/phrases.json').then(function (list) {
         state.base.phrases = list;

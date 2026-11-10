@@ -103,10 +103,12 @@
 
   // Where the grid/back buttons on the game and result screens lead.
   function setBack(screen) {
-    document.querySelectorAll('#play .bar [data-go], #result [data-go]:not([data-go="home"])').forEach(function (b) {
+    document.querySelectorAll('#play .back-btn, #result .back-btn').forEach(function (b) {
       b.dataset.go = screen;
       var use = b.querySelector('use');
-      if (use) use.setAttribute('href', screen === 'games' || screen === 'phraseGames' ? '#i-grid' : '#i-back');
+      if (use) use.setAttribute('href', screen === 'home' ? '#i-home' : screen === 'games' || screen === 'phraseGames' ? '#i-grid' : '#i-back');
+      // Started from the home screen: the result screen already has a home button.
+      if (b.closest('#result')) b.hidden = screen === 'home';
     });
   }
 
@@ -330,13 +332,16 @@
   // Today's review: due words first (then the least known), so missed words
   // come back. Nothing due: say so kindly and practise the words that need it
   // most. The play mode takes turns: listen, match, memory (Progress.REVIEW_MODES).
-  function review() {
+  // `back`: the screen the round was started from ('themes', or 'home' for the
+  // big play button); "play again" keeps it.
+  function review(back) {
+    if (back) state.reviewBack = back;
     var set = Progress.reviewSet(state.words, rounds().review);
     var intro = set.due.length ? 'review.intro' : 'review.none';
     var list = Quiz.shuffle(set.list, Math.random);
     var mode = Progress.nextReviewMode();
     var def = defs.filter(function (d) { return d.id === mode; })[0] || defs[0];
-    open(def, { targets: list, intro: intro, back: 'themes', mode: 'review' });
+    open(def, { targets: list, intro: intro, back: state.reviewBack || 'themes', mode: 'review' });
   }
 
   // The result screen with n stars (tests and audits use it to reach the screen);

@@ -133,12 +133,13 @@
   }
 
   // ---------- 幼幼模式 (little ones' mode): short, easier rounds (Quiz.EASY).
-  // Off by default; kept on this device like the word range.
+  // On by default (2026-11-10: the game is for a 3-year-old); a grown-up can
+  // switch it off. Kept on this device like the word range.
   var EASY_KEY = 'ew.easy.v1';
-  var easyMemory = false;
+  var easyMemory = true;
   function easy() {
     var st = storage();
-    try { return st ? st.getItem(EASY_KEY) === '1' : easyMemory; } catch (e) { return easyMemory; }
+    try { return st ? st.getItem(EASY_KEY) !== '0' : easyMemory; } catch (e) { return easyMemory; }
   }
   function setEasy(on) {
     easyMemory = !!on;

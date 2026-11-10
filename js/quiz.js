@@ -19,7 +19,7 @@
     choices: 4,            // pictures to pick from in a listen question
     askAgain: 99           // missed words asked again at the end of a round (all of them)
   };
-  // Little ones' mode (幼幼模式, a switch in the grown-up settings, off by
+  // Little ones' mode (幼幼模式, a switch in the grown-up settings, on by
   // default): a round a 3-year-old can finish in a few minutes. Shorter
   // rounds, three pictures instead of four, six memory cards instead of
   // twelve, and only one missed word comes back at the end.

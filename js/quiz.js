@@ -15,8 +15,27 @@
     review: 9,             // today's word review (was 6)
     phraseListen: 10,      // 聽句子找圖 (was 7: each phrase once)
     phraseOrder: 6,        // 排句子 (was 3: each of the 3 orderable phrases twice; 9 = three times was too samey)
-    phraseReview: 6        // today's phrase review (was 4)
+    phraseReview: 6,       // today's phrase review (was 4)
+    choices: 4,            // pictures to pick from in a listen question
+    askAgain: 99           // missed words asked again at the end of a round (all of them)
   };
+  // Little ones' mode (幼幼模式, a switch in the grown-up settings, off by
+  // default): a round a 3-year-old can finish in a few minutes. Shorter
+  // rounds, three pictures instead of four, six memory cards instead of
+  // twelve, and only one missed word comes back at the end.
+  var EASY = {
+    listen: 5,
+    matchBoards: 2,
+    matchPerBoard: 3,
+    memoryPairs: 3,
+    review: 5,
+    phraseListen: 5,
+    phraseOrder: 3,
+    phraseReview: 4,
+    choices: 3,
+    askAgain: 1
+  };
+  function rounds(easy) { return easy ? EASY : ROUNDS; }
 
   // Small seeded random generator (mulberry32).
   function rng(seed) {
@@ -141,7 +160,7 @@
     return 1;
   }
 
-  var Quiz = { ROUNDS: ROUNDS, rng: rng, shuffle: shuffle, pool: pool, targets: targets, distractors: distractors, questions: questions, questionsFor: questionsFor, pick: pick, boards: boards, stars: stars };
+  var Quiz = { ROUNDS: ROUNDS, EASY: EASY, rounds: rounds, rng: rng, shuffle: shuffle, pool: pool, targets: targets, distractors: distractors, questions: questions, questionsFor: questionsFor, pick: pick, boards: boards, stars: stars };
   if (typeof module !== 'undefined' && module.exports) module.exports = Quiz;
   else root.Quiz = Quiz;
 })(this);

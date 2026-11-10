@@ -39,6 +39,30 @@
 
   function register(def) { defs.push(def); }
 
+  // Round sizes: the usual ones, or the short ones of 幼幼模式 (Quiz.EASY).
+  function rounds() { return Quiz.rounds(!!(window.Settings && Settings.easy && Settings.easy())); }
+
+  // ---------- a child who stopped
+  // Nothing tapped for a while after the voice ended: the question is said
+  // again by itself (the same as the speaker button), at most NUDGE_MAX times
+  // in a row, so a tablet left on the sofa goes quiet. Any tap starts over.
+  var NUDGE_MS = 8000, NUDGE_MAX = 3;
+  var nudge = { timer: null, count: 0, speaking: false };
+  function armNudge() {
+    clearTimeout(nudge.timer);
+    nudge.timer = null;
+    if ($('#play').hidden || nudge.count >= NUDGE_MAX) return;
+    nudge.timer = setTimeout(function () {
+      nudge.timer = null;
+      if ($('#play').hidden || document.hidden || nudge.speaking) return; // 'idle' arms it again
+      if (!state.replay) { armNudge(); return; }
+      nudge.count++;
+      state.replay();
+      armNudge();
+    }, NUDGE_MS);
+  }
+  function resetNudge() { nudge.count = 0; armNudge(); }
+
   // ---------- menu
   // `words` are the words in range (Scope.words): the menu has no theme
   // chips any more (Tim 2026-11-06), the child cannot change the range here.
@@ -72,6 +96,9 @@
     state.stops.forEach(function (fn) { try { fn(); } catch (e) { /* ignore */ } });
     state.stops = [];
     state.replay = null;
+    clearTimeout(nudge.timer);
+    nudge.timer = null;
+    nudge.count = 0;
   }
 
   // Where the grid/back buttons on the game and result screens lead.
@@ -112,6 +139,8 @@
       Speech.zh(def.intro);
     }
     var note = function (w) { if (w && state.roundWords.indexOf(w) < 0) state.roundWords.push(w); };
+    var R = rounds();
+    armNudge();
 
     var alive = function () { return run === state.run; };
     var later = function (ms, fn) {
@@ -130,6 +159,7 @@
       words: state.words,
       themeId: null,   // the word range is set by a grown-up in settings (js/scope.js)
       targets: opts.targets || null,
+      rounds: R,       // round sizes (Quiz.ROUNDS, or Quiz.EASY in 幼幼模式)
       rand: Math.random,
       el: el,
       icon: icon,
@@ -188,6 +218,7 @@
       // opts.bridge: an easy word from the round asked first and not recorded,
       // so a word missed in the very last question is not asked twice in a row.
       askAgain: function (list, q, done, opts) {
+        list = list.slice(0, R.askAgain);
         if (!list.length) { done(); return; }
         var items = list.map(function (w) { return { w: w, record: true }; });
         if (opts && opts.bridge) items.unshift({ w: opts.bridge, record: false });
@@ -202,7 +233,9 @@
           var w = items[k].w, rec = items[k].record, missed = false, locked = false;
           api.setQ(q + k);
           grid.textContent = '';
-          Quiz.questionsFor([w], state.words, 4, Math.random)[0].options.forEach(function (o) {
+          var options = Quiz.questionsFor([w], state.words, R.choices, Math.random)[0].options;
+          grid.dataset.n = String(options.length);
+          options.forEach(function (o) {
             var b = api.picture(o);
             b.dataset.again = '1';
             b.addEventListener('click', function () {
@@ -280,6 +313,11 @@
   }
 
   function bind() {
+    $('#play').addEventListener('pointerdown', resetNudge);
+    Speech.on(function (type) {
+      if (type === 'busy') nudge.speaking = true;
+      if (type === 'idle') { nudge.speaking = false; armNudge(); }
+    });
     $('#replayBtn').addEventListener('click', function () {
       if (state.replay) state.replay();
     });
@@ -292,9 +330,8 @@
   // Today's review: due words first (then the least known), so missed words
   // come back. Nothing due: say so kindly and practise the words that need it
   // most. The play mode takes turns: listen, match, memory (Progress.REVIEW_MODES).
-  var REVIEW_SIZE = Quiz.ROUNDS.review;
   function review() {
-    var set = Progress.reviewSet(state.words, REVIEW_SIZE);
+    var set = Progress.reviewSet(state.words, rounds().review);
     var intro = set.due.length ? 'review.intro' : 'review.none';
     var list = Quiz.shuffle(set.list, Math.random);
     var mode = Progress.nextReviewMode();
@@ -309,5 +346,5 @@
     result(n, words || [], right || []);
   }
 
-  window.Games = { open: open, register: register, build: build, menu: menu, stop: stop, bind: bind, review: review, showResult: showResult, list: function () { return defs.slice(); } };
+  window.Games = { open: open, register: register, build: build, menu: menu, stop: stop, bind: bind, review: review, rounds: rounds, showResult: showResult, list: function () { return defs.slice(); } };
 })();

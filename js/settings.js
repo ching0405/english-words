@@ -1,5 +1,6 @@
-// Settings for grown-ups (Tim 2026-11-06): only the word range (which themes
-// the games, today's review, theme cards and sticker book use). Not the old
+// Settings for grown-ups (Tim 2026-11-06): the word range (which themes
+// the games, today's review, theme cards and sticker book use) and 幼幼模式
+// (short, easier rounds for about 3-year-olds). Not the old
 // parent corner: no own words, import/export or clearing progress.
 // Children cannot get in by chance: the gear on the home screen needs a
 // 2-second hold, then a sum (11–19 + 6–9). The screen itself uses Chinese
@@ -88,6 +89,7 @@
   }
 
   function render() {
+    renderEasy();
     var list = $('#scopeList');
     list.textContent = '';
     var s = current(), themes = opts.themes(), words = opts.words();
@@ -130,10 +132,29 @@
     $('#scopeFew').textContent = TEXT.few;
   }
 
+  // ---------- 幼幼模式 (little ones' mode): short, easier rounds (Quiz.EASY).
+  // Off by default; kept on this device like the word range.
+  var EASY_KEY = 'ew.easy.v1';
+  var easyMemory = false;
+  function easy() {
+    var st = storage();
+    try { return st ? st.getItem(EASY_KEY) === '1' : easyMemory; } catch (e) { return easyMemory; }
+  }
+  function setEasy(on) {
+    easyMemory = !!on;
+    var st = storage();
+    try { if (st) st.setItem(EASY_KEY, on ? '1' : '0'); } catch (e) { /* kept for this visit only */ }
+  }
+  function renderEasy() { $('#easySwitch').setAttribute('aria-checked', String(easy())); }
+
   function init(o) {
     opts = o;
     bindDoor();
+    $('#easySwitch').addEventListener('click', function () {
+      setEasy(!easy());
+      renderEasy();
+    });
   }
 
-  window.Settings = { init: init, render: render, scope: current };
+  window.Settings = { init: init, render: render, scope: current, easy: easy };
 })();

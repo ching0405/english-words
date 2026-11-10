@@ -3,7 +3,6 @@
 (function () {
   'use strict';
 
-  var BOARDS = Quiz.ROUNDS.matchBoards, PER_BOARD = Quiz.ROUNDS.matchPerBoard;
   var COLORS = ['#ff5a5f', '#4fb0ff', '#5ccf6a', '#9b6bff'];
   var SVGNS = 'http://www.w3.org/2000/svg';
 
@@ -21,6 +20,7 @@
     color: '#c9f0c1',
     intro: 'intro.match',
     start: function (api) {
+      var BOARDS = api.rounds.matchBoards, PER_BOARD = api.rounds.matchPerBoard;
       // Review rounds bring their own words: boards of three in order.
       var boards = api.targets
         ? chunks(api.targets.slice(0, BOARDS * PER_BOARD), PER_BOARD).filter(function (x) { return x.length >= 2; })
@@ -85,7 +85,14 @@
         });
         box.append(left, svg, right);
         api.setQ(done);
-        api.onReplay(function () { if (picked) api.word(picked.w); else api.zh('intro.match'); });
+        // Nothing picked yet: say how to play and rock the first speaker left,
+        // so a child who is stuck sees where to tap.
+        api.onReplay(function () {
+          if (picked) { api.word(picked.w); return; }
+          var s = left.querySelector('.match-say:not(:disabled)');
+          if (s) Fx.move(s, 'wiggle');
+          api.zh('intro.match');
+        });
       }
 
       function choose(s, w) {

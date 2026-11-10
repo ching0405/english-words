@@ -14,7 +14,6 @@
   // Order-game tokens get these colours dealt afresh every question, so a
   // colour never tells which word comes first: only listening does.
   var colors = ['#4fb0ff', '#ff9f43', '#ff8fc0', '#9b6bff'];
-  var REVIEW_SIZE = Quiz.ROUNDS.phraseReview;
 
   function zhOn() { return document.body.classList.contains('show-zh'); }
 
@@ -25,7 +24,7 @@
       start: function (api) {
         // Review keeps its priority order (due, then missed). The games deal
         // their phrases round and round, shuffled, never one twice in a row.
-        var count = mode === 'order' ? Quiz.ROUNDS.phraseOrder : Quiz.ROUNDS.phraseListen;
+        var count = mode === 'order' ? api.rounds.phraseOrder : api.rounds.phraseListen;
         var list = mode === 'review' ? targets : Quiz.targets(targets || phrases, count, Math.random);
         var q = 0;
         api.dots(list.length);
@@ -232,7 +231,7 @@
   // Today's review: due phrases first, then missed ones; back to the phrase area.
   function review() {
     var set = Progress.reviewSet(phrases, phrases.length);
-    var targets = PhraseQuiz.reviewList(set, Progress.get, REVIEW_SIZE);
+    var targets = PhraseQuiz.reviewList(set, Progress.get, Games.rounds().phraseReview);
     Games.open(definition('review', targets), { back: 'phrases', targets: targets });
   }
 

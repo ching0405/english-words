@@ -21,6 +21,11 @@
     intro: 'intro.match',
     start: function (api) {
       var BOARDS = api.rounds.matchBoards, PER_BOARD = api.rounds.matchPerBoard;
+      // 幼幼模式 (2026-11-11): "tap a speaker, then its picture" is two steps
+      // too many for a 3-year-old. Guided: one speaker at a time lights up and
+      // says its word by itself, the others wait; the child taps (or drags to)
+      // the picture, then the next speaker takes its turn.
+      var GUIDED = !!api.rounds.matchGuided;
       // Review rounds bring their own words: boards of three in order.
       var boards = api.targets
         ? chunks(api.targets.slice(0, BOARDS * PER_BOARD), PER_BOARD).filter(function (x) { return x.length >= 2; })
@@ -61,7 +66,7 @@
         lines.forEach(function (l) { path(center(l.a), center(l.b), l.color); });
       }
 
-      function board() {
+      function board(queue) {
         missed = {};
         box.textContent = '';
         lines = [];
@@ -75,7 +80,7 @@
           s.dataset.word = w.id;
           s.appendChild(api.icon('#i-speaker'));
           s.addEventListener('pointerdown', function (e) { startDrag(e, s, w); });
-          s.addEventListener('click', function () { if (!s.disabled) choose(s, w); });
+          s.addEventListener('click', function () { if (!s.disabled && !s.classList.contains('is-wait')) choose(s, w); });
           left.appendChild(s);
         });
         Quiz.shuffle(boards[b], api.rand).forEach(function (w) {
@@ -85,6 +90,7 @@
         });
         box.append(left, svg, right);
         api.setQ(done);
+        if (GUIDED) turn(queue !== false);
         // Nothing picked yet: say how to play and rock the first speaker left,
         // so a child who is stuck sees where to tap.
         api.onReplay(function () {
@@ -95,16 +101,27 @@
         });
       }
 
-      function choose(s, w) {
+      function choose(s, w, queue) {
         if (picked) picked.s.classList.remove('is-picked');
         picked = { s: s, w: w };
         s.classList.add('is-picked');
-        api.word(w);
+        api.word(w, { queue: queue === true });
+      }
+      // Guided: the next speaker not joined yet takes its turn and says its
+      // word (queue: after the line being spoken); the rest wait, dimmed.
+      function turn(queue) {
+        var says = [].slice.call(box.querySelectorAll('.match-say'));
+        var next = says.filter(function (s) { return !s.disabled; })[0];
+        says.forEach(function (s) { s.classList.toggle('is-wait', !s.disabled && s !== next); });
+        if (!next) return;
+        choose(next, boards[b].filter(function (w) { return w.id === next.dataset.word; })[0], queue);
+        Fx.move(next, 'wiggle');
       }
 
       function join(p, w) {
         if (p.classList.contains('is-done')) return;
         if (!picked) {
+          if (GUIDED) return; // between turns (the praise is playing): the next speaker is coming
           // Picture first: point back to the speakers.
           Fx.move(p, 'shake');
           api.zh('match.speaker_first');
@@ -134,16 +151,16 @@
         api.setQ(done);
         Fx.tap(p.querySelector('img'), w);
         api.right(null, function () {
-          if (lines.length < boards[b].length) return;
+          if (lines.length < boards[b].length) { if (GUIDED) turn(false); return; }
           b++;
-          if (b < boards.length) { board(); api.zh('match.next_board'); return; }
+          if (b < boards.length) { api.zh('match.next_board'); board(true); return; }
           api.askAgain(missedWords, done, function () { api.finish(2, 5); });
         });
       }
 
       // Drag from a speaker: a line follows the finger; letting go on a picture joins them.
       function startDrag(e, s, w) {
-        if (s.disabled) return;
+        if (s.disabled || s.classList.contains('is-wait')) return;
         drag = { s: s, w: w, x: e.clientX, y: e.clientY, moved: false };
         try { s.releasePointerCapture(e.pointerId); } catch (err) { /* touch keeps capture otherwise */ }
       }

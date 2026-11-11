@@ -393,6 +393,8 @@ h1 .en { display: block; font-size: clamp(26px, 6.4vw, 64px); color: var(--sky-i
 .match-say .ic { width: calc(var(--m) * .42); height: calc(var(--m) * .42); }
 .match-say.is-picked { box-shadow: 0 0 0 6px #fff, 0 0 0 11px var(--sky); }
 .match-say.is-done { background: #e6fbe4; opacity: 1; }
+/* guided (幼幼模式): speakers waiting for their turn */
+.match-say.is-wait { opacity: .3; filter: grayscale(.6); box-shadow: none; cursor: default; }
 .match-pic { width: 100%; height: 100%; touch-action: none; }
 .match-pic.is-done { border-color: var(--line); box-shadow: 0 var(--lift) 0 var(--line); }
 
@@ -402,7 +404,12 @@ h1 .en { display: block; font-size: clamp(26px, 6.4vw, 64px); color: var(--sky-i
 .result-stars { display: flex; gap: 2vw; }
 .big-star { width: min(26vw, 22vh, 220px); height: min(26vw, 22vh, 220px); fill: #efe3c8; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; animation: star-in .5s ease-out both; }
 .big-star.on { fill: var(--sun); }
-.result-actions { display: flex; gap: clamp(20px, 5vw, 48px); }
+.result-actions { display: flex; align-items: center; gap: clamp(20px, 5vw, 48px); }
+/* "Play again" is the child's button: big and breathing. The ways out are small. */
+#againBtn { padding: 0; width: calc(var(--nav) * 1.5); min-height: calc(var(--nav) * 1.5); border-radius: 50%; animation: breathe 1.4s ease-in-out infinite; }
+#againBtn .ic { width: calc(var(--nav) * .75); height: calc(var(--nav) * .75); }
+.result-actions .btn-nav:not(#againBtn) { width: max(60px, calc(var(--nav) * .7)); min-width: 0; min-height: max(60px, calc(var(--nav) * .7)); padding: 0; }
+.result-actions .btn-nav:not(#againBtn) .ic { width: calc(var(--nav) * .36); height: calc(var(--nav) * .36); }
 @keyframes star-in { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.18); opacity: 1; } 80% { transform: scale(.95); } }
 
 /* ---------- star jar */

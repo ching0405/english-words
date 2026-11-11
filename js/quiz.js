@@ -27,6 +27,7 @@
     listen: 5,
     matchBoards: 2,
     matchPerBoard: 3,
+    matchGuided: true,     // 連連看: one speaker at a time says its word by itself; the child only taps the picture
     memoryPairs: 3,
     review: 5,
     phraseListen: 5,

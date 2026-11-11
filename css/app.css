@@ -404,6 +404,8 @@ h1 .en { display: block; font-size: clamp(26px, 6.4vw, 64px); color: var(--sky-i
 .result-stars { display: flex; gap: 2vw; }
 .big-star { width: min(26vw, 22vh, 220px); height: min(26vw, 22vh, 220px); fill: #efe3c8; stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; animation: star-in .5s ease-out both; }
 .big-star.on { fill: var(--sun); }
+/* Only the stars won are shown (2026-11-11): an empty star means nothing to a small child. */
+.big-star:not(.on) { display: none; }
 .result-actions { display: flex; align-items: center; gap: clamp(20px, 5vw, 48px); }
 /* "Play again" is the child's button: big and breathing. The ways out are small. */
 #againBtn { padding: 0; width: calc(var(--nav) * 1.5); min-height: calc(var(--nav) * 1.5); border-radius: 50%; animation: breathe 1.4s ease-in-out infinite; }

@@ -121,9 +121,12 @@
           if (mode === 'listen' || mode === 'review') {
             var grid = api.el('div', 'choices');
             api.stage.appendChild(grid);
-            PhraseQuiz.choices(phrase, phrases, Math.random).forEach(function (option) {
+            var options = PhraseQuiz.choices(phrase, phrases, Math.random, api.rounds.choices);
+            grid.dataset.n = String(options.length);
+            options.forEach(function (option) {
               var button = api.picture(option);
               grid.appendChild(button);
+              if (option.id === phrase.id) api.onHint(function () { if (!locked) Fx.move(button, 'wiggle'); });
               button.onclick = function () {
                 if (locked || button.classList.contains('is-wrong')) return;
                 if (option.id === phrase.id) {
@@ -241,7 +244,10 @@
     [
       ['listen', '聽句子找圖', '#g-listen'],
       ['order', '排句子', '#g-order']
-    ].forEach(function (row) {
+    ].filter(function (row) {
+      // 排句子 needs word order, too hard for about 3: not offered in 幼幼模式.
+      return !(row[0] === 'order' && Games.rounds().hideOrder);
+    }).forEach(function (row) {
       var button = document.createElement('button');
       button.className = 'game-card';
       button.dataset.phraseMode = row[0];

@@ -5,11 +5,11 @@
   function accepts(p,position,index){return Number.isInteger(position) && position>=0 && position===index && position<tokens(p).length;}
   function round(list,rand){return list.map(function(p){return {p:p,r:rand()};}).sort(function(a,b){return a.r-b.r;}).map(function(x){return x.p;});}
   // Never two choices with one picture: a child could not tell them apart.
-  function choices(answer,all,rand){
+  function choices(answer,all,rand,n){
     var pics={};pics[answer.image]=true;
     var others=round(all.filter(function(p){return p.id!==answer.id;}),rand).filter(function(p){
       if(p.image&&pics[p.image])return false;pics[p.image]=true;return true;});
-    return round([answer].concat(others.slice(0,3)),rand);
+    return round([answer].concat(others.slice(0,(n||4)-1)),rand);
   }
   // Ordering a one-word phrase is not a task, so the order game skips them;
   // the board has room for four word cards.

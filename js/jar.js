@@ -146,7 +146,13 @@
         setTimeout(function () { box.classList.remove('jar-celebrate'); render(box); renderAll(); }, 1600);
       } else {
         render(box, null, res.before.stars);
-        Fx.move(box.querySelector('.jar-main'), 'wiggle');
+        // A third and two thirds full (10, 20 of 30): a small party on the way,
+        // so the full jar is not the only celebration.
+        var step = Progress.lib.JAR_SIZE / 3;
+        var party = Math.floor(res.jar.stars / step) > Math.floor(res.before.stars / step);
+        var jar = box.querySelector('.jar-main');
+        if (party) { Fx.sound('star'); Fx.move(jar, 'cheer'); if (Fx.burst) Fx.burst(jar); }
+        else Fx.move(jar, 'wiggle');
         renderAll();
       }
     }

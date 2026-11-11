@@ -32,6 +32,7 @@
     review: 5,
     phraseListen: 5,
     phraseOrder: 3,
+    hideOrder: true,       // 排句子 is left out of the phrase games menu
     phraseReview: 4,
     choices: 3,
     askAgain: 1

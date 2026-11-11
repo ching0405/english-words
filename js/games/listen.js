@@ -33,6 +33,7 @@
           var b = api.picture(w);
           b.addEventListener('click', function () { pick(b, w); });
           grid.appendChild(b);
+          if (w.id === q.target.id) api.onHint(function () { if (!locked) Fx.move(b, 'wiggle'); });
         });
         api.onReplay(function () { api.word(q.target); });
         locked = false;

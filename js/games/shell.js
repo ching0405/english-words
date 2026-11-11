@@ -46,7 +46,7 @@
   // Nothing tapped for a while after the voice ended: the question is said
   // again by itself (the same as the speaker button), at most NUDGE_MAX times
   // in a row, so a tablet left on the sofa goes quiet. Any tap starts over.
-  var NUDGE_MS = 8000, NUDGE_MAX = 3;
+  var NUDGE_MS = 8000, NUDGE_MAX = 3, HINT_FROM = 2;
   var nudge = { timer: null, count: 0, speaking: false };
   function armNudge() {
     clearTimeout(nudge.timer);
@@ -58,6 +58,8 @@
       if (!state.replay) { armNudge(); return; }
       nudge.count++;
       state.replay();
+      // From the second time on the right answer also rocks a little.
+      if (nudge.count >= HINT_FROM && state.hint) state.hint();
       armNudge();
     }, NUDGE_MS);
   }
@@ -96,6 +98,7 @@
     state.stops.forEach(function (fn) { try { fn(); } catch (e) { /* ignore */ } });
     state.stops = [];
     state.replay = null;
+    state.hint = null;
     clearTimeout(nudge.timer);
     nudge.timer = null;
     nudge.count = 0;
@@ -170,6 +173,8 @@
       alive: alive,
       onStop: function (fn) { state.stops.push(fn); },
       onReplay: function (fn) { state.replay = fn; },
+      // What shows the right answer to a child who stopped (see armNudge).
+      onHint: function (fn) { state.hint = fn; },
       // English word; queue:true waits for the spoken instruction first.
       word: function (w, opts) { note(w); return Speech.play(w, opts); },
       zh: function (key, opts) { return Speech.zh(key, opts); },
@@ -256,6 +261,7 @@
               }
             });
             grid.appendChild(b);
+            if (o.id === w.id) api.onHint(function () { if (!locked) Fx.move(b, 'wiggle'); });
           });
           api.onReplay(function () { api.word(w); });
           if (k === 0) {

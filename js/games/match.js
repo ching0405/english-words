@@ -90,6 +90,10 @@
         });
         box.append(left, svg, right);
         api.setQ(done);
+        api.onHint(function () {
+          var p = picked && right.querySelector('.match-pic[data-word="' + picked.w.id + '"]');
+          if (p) Fx.move(p, 'wiggle');
+        });
         if (GUIDED) turn(queue !== false);
         // Nothing picked yet: say how to play and rock the first speaker left,
         // so a child who is stuck sees where to tap.

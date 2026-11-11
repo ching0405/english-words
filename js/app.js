@@ -231,6 +231,7 @@
   // The deck-finished praise waits for the star jingle (0.76s; its last note
   // is fading by then) so the two do not cover each other.
   var DONE_DELAY = 450;
+  var CHEER_EVERY = 5;
   var doneTimer = null;
   function cancelDone() { clearTimeout(doneTimer); doneTimer = null; }
 
@@ -263,6 +264,9 @@
     cancelDone();
     state.i = next;
     renderCard(delta);
+    // Long decks (animals: 17): a little cheer every CHEER_EVERY cards on the
+    // way forward, not only at the very end.
+    if (delta > 0 && next % CHEER_EVERY === 0) { Fx.sound('sparkle'); Fx.move($('#picImg'), 'cheer'); Fx.burst($('#pic')); }
     speakCurrent();
   }
 
